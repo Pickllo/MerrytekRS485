@@ -9,8 +9,10 @@ uart:
 # 2. Configure the Merrytek Radar component hub
 external_components:
   - source:
-      type: local
-      path: custom_components
+      type: git
+      url: [https://github.com/Pickllo/MerrytekRS485](https://github.com/Pickllo/MerrytekRS485)
+      ref: main 
+    components: [ merrytek_radar ]
 
 merrytek_radar:
   - uart_id: uart_bus
