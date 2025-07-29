@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID, CONF_UART_ID, CONF_DEVICE_ID
+from esphome.const import CONF_ID, CONF_UART_ID
 from esphome.core import coroutine_with_priority
 
 # Declare the component's namespace
@@ -9,6 +9,9 @@ merrytek_radar_ns = cg.esphome_ns.namespace("merrytek_radar")
 MerrytekRadar = merrytek_radar_ns.class_(
     "MerrytekRadar", cg.PollingComponent, cg.UARTComponent
 )
+
+# Define our custom configuration key
+CONF_DEVICE_ID = "device_id"
 
 # Define the configuration schema
 CONFIG_SCHEMA = (
