@@ -1,0 +1,18 @@
+# ESPHome and PlatformIO
+.esphome/
+.pioenvs/
+.piolibdeps/
+*.bin
+*.elf
+*.i
+*.map
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE files
+.vscode/
+.idea/
