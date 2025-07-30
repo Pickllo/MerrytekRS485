@@ -7,7 +7,7 @@ from esphome.const import (
     CONF_MIN_VALUE,
     CONF_STEP,
 )
-from . import MerrytekRadar
+from . import MerrytekNumber, MerrytekRadar
 
 # Define supported number entities and their function codes
 CONF_DETECTION_AREA = "detection_area"
@@ -25,9 +25,8 @@ NUMBERS = {
 }
 
 # Define the configuration schema for number entities
-# This now correctly includes min_value, max_value, and step as optional keys with defaults.
 CONFIG_SCHEMA = number.NUMBER_SCHEMA.extend({
-    cv.GenerateID(CONF_ID): cv.declare_id(number.Number),
+    cv.GenerateID(CONF_ID): cv.declare_id(MerrytekNumber),
     cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
     cv.Required("type"): cv.one_of(*NUMBERS, lower=True),
     cv.Optional(CONF_MIN_VALUE, default=0.0): cv.float_,
@@ -39,9 +38,8 @@ CONFIG_SCHEMA = number.NUMBER_SCHEMA.extend({
 # Generate C++ code
 async def to_code(config):
     hub = await cg.get_variable(config["merrytek_radar_id"])
-    var = cg.new_Pvariable(config[CONF_ID])
+    var = await cg.new_Pvariable(config[CONF_ID])
     
-    # Explicitly pass the required arguments from the config object
     await number.register_number(
         var,
         config,
@@ -49,6 +47,7 @@ async def to_code(config):
         max_value=config[CONF_MAX_VALUE],
         step=config[CONF_STEP],
     )
+    await cg.register_component(var, config)
 
     sensor_type = config["type"]
     function_code = NUMBERS[sensor_type]
