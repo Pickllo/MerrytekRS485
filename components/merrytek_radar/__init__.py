@@ -4,6 +4,9 @@ from esphome.components import uart
 from esphome.const import CONF_ID
 from esphome.core import coroutine_with_priority
 
+# Declare all the components our hub depends on
+DEPENDENCIES = ['uart', 'binary_sensor', 'sensor', 'number', 'switch', 'select', 'button']
+
 # Declare the component's namespace
 CODEOWNERS = ["@Pickllo"]
 merrytek_radar_ns = cg.esphome_ns.namespace("merrytek_radar")
