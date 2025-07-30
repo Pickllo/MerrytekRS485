@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import uart
+from esphome.components import uart, switch, number, select, button
 from esphome.const import CONF_ID
 from esphome.core import coroutine_with_priority
 
@@ -10,14 +10,22 @@ DEPENDENCIES = ['uart', 'binary_sensor', 'sensor', 'number', 'switch', 'select',
 # Declare the component's namespace
 CODEOWNERS = ["@Pickllo"]
 merrytek_radar_ns = cg.esphome_ns.namespace("merrytek_radar")
+
+# Declare the HUB class
 MerrytekRadar = merrytek_radar_ns.class_(
     "MerrytekRadar", cg.PollingComponent, uart.UARTDevice
 )
 
+# Declare the custom entity classes that live in the C++ code
+MerrytekSwitch = merrytek_radar_ns.class_("MerrytekSwitch", switch.Switch, cg.Component)
+MerrytekNumber = merrytek_radar_ns.class_("MerrytekNumber", number.Number, cg.Component)
+MerrytekSelect = merrytek_radar_ns.class_("MerrytekSelect", select.Select, cg.Component)
+MerrytekButton = merrytek_radar_ns.class_("MerrytekButton", button.Button, cg.Component)
+
 # Define our custom configuration key
 CONF_DEVICE_ID = "device_id"
 
-# Define the configuration schema
+# Define the configuration schema for the main hub
 CONFIG_SCHEMA = (
     cv.Schema(
         {
@@ -29,7 +37,7 @@ CONFIG_SCHEMA = (
     .extend(uart.UART_DEVICE_SCHEMA)
 )
 
-# Define the coroutine to generate the C++ code
+# Define the coroutine to generate the C++ code for the main hub
 @coroutine_with_priority(40.0)
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
