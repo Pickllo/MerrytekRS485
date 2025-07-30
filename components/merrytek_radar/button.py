@@ -12,7 +12,7 @@ CONF_FLIP_STATUS = "flip_status"
 
 BUTTONS = {
     CONF_FACTORY_RESET: (0x30, [0x01]),
-    CONF_ENVIRONMENTAL_SELF_LEARNING: (0x29, [0x01]), # Default action, can be changed via lambda
+    CONF_ENVIRONMENTAL_SELF_LEARNING: (0x29, [0x01]),
     CONF_ID_EDIT_ENABLE: (0x21, [0x01]),
     CONF_FLIP_STATUS: (0x23, [0x01]),
 }
@@ -35,7 +35,7 @@ async def to_code(config):
     sensor_type = config["type"]
     function_code, data = BUTTONS[sensor_type]
     
-    # Convert data to a C++ vector
-    data_vector = cg.std_vector(data, type=cg.uint8)
+    # Correct syntax for creating a std::vector<uint8_t>
+    data_vector = cg.std_vector.template(cg.uint8)(data)
     
     cg.add(hub.register_configurable_button(var, function_code, data_vector))
