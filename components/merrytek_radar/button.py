@@ -2,7 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import button
 from esphome.const import CONF_ID
-from . import MerrytekRadar
+from . import MerrytekButton, MerrytekRadar
 
 # Define supported button entities and their function codes
 CONF_FACTORY_RESET = "factory_reset"
@@ -18,19 +18,18 @@ BUTTONS = {
 }
 
 # Define the configuration schema for button entities
-CONFIG_SCHEMA = cv.Schema(
-    {
-        cv.GenerateID(CONF_ID): cv.declare_id(button.Button),
-        cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
-        cv.Required("type"): cv.one_of(*BUTTONS, lower=True),
-    }
-).extend(button.BUTTON_SCHEMA)
+CONFIG_SCHEMA = button.BUTTON_SCHEMA.extend({
+    cv.GenerateID(CONF_ID): cv.declare_id(MerrytekButton),
+    cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
+    cv.Required("type"): cv.one_of(*BUTTONS, lower=True),
+}).extend(cv.COMPONENT_SCHEMA)
 
 # Generate C++ code
 async def to_code(config):
     hub = await cg.get_variable(config["merrytek_radar_id"])
-    var = cg.new_Pvariable(config[CONF_ID])
+    var = await cg.new_Pvariable(config[CONF_ID])
     await button.register_button(var, config)
+    await cg.register_component(var, config)
 
     sensor_type = config["type"]
     function_code, data = BUTTONS[sensor_type]
