@@ -60,12 +60,12 @@ class MerrytekButton : public button::Button, public Component {
 };
 
 
-// Main Component Class
-class MerrytekRadar : public PollingComponent, public uart::UARTDevice {
+// Main Component Class - REMOVED PollingComponent
+class MerrytekRadar : public Component, public uart::UARTDevice {
  public:
   void setup() override;
   void loop() override;
-  void update() override;
+  // void update() override; // REMOVED
   void dump_config() override;
 
   void set_device_id(uint16_t device_id) { this->device_id_ = device_id; }
