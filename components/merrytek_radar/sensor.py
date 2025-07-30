@@ -3,7 +3,6 @@ import esphome.config_validation as cv
 from esphome.components import sensor
 from esphome.const import (
     CONF_ID,
-    CONF_LIGHT_LEVEL,
     CONF_FIRMWARE_VERSION,
     ICON_CHIP,
     STATE_CLASS_MEASUREMENT,
@@ -11,8 +10,11 @@ from esphome.const import (
 )
 from . import MerrytekRadar
 
-# Define supported sensors and their function codes
+# Define our custom sensor types as strings
+CONF_LIGHT_LEVEL = "light_level"
 CONF_DIFFERENCE_VALUE = "difference_value"
+
+# Map the custom types to their function codes
 SENSORS = {
     CONF_LIGHT_LEVEL: 0x09,
     CONF_DIFFERENCE_VALUE: 0x0A,
@@ -20,13 +22,11 @@ SENSORS = {
 }
 
 # Define the configuration schema for sensors
-CONFIG_SCHEMA = cv.Schema(
-    {
-        cv.GenerateID(CONF_ID): cv.declare_id(sensor.Sensor),
-        cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
-        cv.Required("type"): cv.one_of(*SENSORS, lower=True),
-    }
-).extend(sensor.SENSOR_SCHEMA)
+CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.extend({
+    cv.GenerateID(CONF_ID): cv.declare_id(sensor.Sensor),
+    cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
+    cv.Required("type"): cv.one_of(*SENSORS, lower=True),
+}).extend(cv.COMPONENT_SCHEMA)
 
 # Generate C++ code
 async def to_code(config):
