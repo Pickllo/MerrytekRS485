@@ -22,7 +22,7 @@ CONFIG_SCHEMA = select.SELECT_SCHEMA.extend({
 # Generate C++ code
 async def to_code(config):
     hub = await cg.get_variable(config["merrytek_radar_id"])
-    var = await cg.new_Pvariable(config[CONF_ID])
+    var = cg.new_Pvariable(config[CONF_ID])
     
     sensor_type = config["type"]
     function_code, options = SELECTS[sensor_type]
