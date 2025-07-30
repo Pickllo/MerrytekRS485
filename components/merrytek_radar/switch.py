@@ -2,7 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import switch
 from esphome.const import CONF_ID
-from . import MerrytekRadar
+from . import MerrytekSwitch, MerrytekRadar
 
 # Define supported switch entities and their function codes
 CONF_LED_INDICATOR = "led_indicator"
@@ -22,19 +22,18 @@ SWITCHES = {
 }
 
 # Define the configuration schema for switch entities
-CONFIG_SCHEMA = cv.Schema(
-    {
-        cv.GenerateID(CONF_ID): cv.declare_id(switch.Switch),
-        cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
-        cv.Required("type"): cv.one_of(*SWITCHES, lower=True),
-    }
-).extend(switch.SWITCH_SCHEMA)
+CONFIG_SCHEMA = switch.SWITCH_SCHEMA.extend({
+    cv.GenerateID(CONF_ID): cv.declare_id(MerrytekSwitch),
+    cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
+    cv.Required("type"): cv.one_of(*SWITCHES, lower=True),
+}).extend(cv.COMPONENT_SCHEMA)
 
 # Generate C++ code
 async def to_code(config):
     hub = await cg.get_variable(config["merrytek_radar_id"])
-    var = cg.new_Pvariable(config[CONF_ID])
+    var = await cg.new_Pvariable(config[CONF_ID])
     await switch.register_switch(var, config)
+    await cg.register_component(var, config)
 
     sensor_type = config["type"]
     function_code = SWITCHES[sensor_type]
