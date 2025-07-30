@@ -39,19 +39,18 @@ static const uint8_t BASE_FRAME_LENGTH = 6; // Base length without data and CRC
 void MerrytekRadar::setup() {}
 
 void MerrytekRadar::dump_config() {
-  ESP_LOGCONFIG(TAG, "Merrytek Radar:");
-  //LOG_UART_DEVICE(this);
+  ESP_LOGCONFIG(TAG, "Merrytek Radar (Passive Listener Mode):");
   ESP_LOGCONFIG(TAG, "  Device ID: 0x%04X", this->device_id_);
-  LOG_UPDATE_INTERVAL(this);
   LOG_BINARY_SENSOR("  ", "Presence", this->presence_sensor_);
   LOG_SENSOR("  ", "Light Level", this->light_sensor_);
   // Log other entities...
 }
 
+/*
 void MerrytekRadar::update() {
-  ESP_LOGD(TAG, "Requesting all data...");
-  this->send_command(FUNC_READ_ALL);
+  // This function is no longer used in passive listening mode.
 }
+*/
 
 void MerrytekRadar::loop() {
   while (available()) {
@@ -201,9 +200,9 @@ void MerrytekSwitch::write_state(bool state) {
 }
 
 void MerrytekSelect::control(const std::string &value) {
-    this->publish_state(value);
     auto index = this->index_of(value);
     if(index.has_value()){
+        this->publish_state(value);
         this->parent_->send_command(this->function_code_, {static_cast<uint8_t>(index.value())});
     }
 }
