@@ -40,7 +40,7 @@ void MerrytekRadar::setup() {}
 
 void MerrytekRadar::dump_config() {
   ESP_LOGCONFIG(TAG, "Merrytek Radar:");
-  LOG_UART_DEVICE(this);
+  //LOG_UART_DEVICE(this);
   ESP_LOGCONFIG(TAG, "  Device ID: 0x%04X", this->device_id_);
   LOG_UPDATE_INTERVAL(this);
   LOG_BINARY_SENSOR("  ", "Presence", this->presence_sensor_);
