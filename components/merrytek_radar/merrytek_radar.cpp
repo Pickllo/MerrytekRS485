@@ -32,8 +32,9 @@ static const uint8_t FUNC_NEAR_ZONE_SHIELDING = 0x33;
 
 // --- Frame Constants ---
 static const uint8_t FRAME_HEADER = 0x51;
-static const uint8_t FRAME_FORMAT = 0x00;
-static const uint8_t BASE_FRAME_LENGTH = 6; // Base length without data and CRC
+static const uint8_t FRAME_FORMAT_BYTE = 0x00;
+static const uint8_t BASE_REQUEST_FRAME_LENGTH = 6;
+static const uint8_t BASE_WRITE_FRAME_LENGTH = 5;
 
 // =================== Component Setup and Loop ===================
 void MerrytekRadar::setup() {}
@@ -43,14 +44,7 @@ void MerrytekRadar::dump_config() {
   ESP_LOGCONFIG(TAG, "  Device ID: 0x%04X", this->device_id_);
   LOG_BINARY_SENSOR("  ", "Presence", this->presence_sensor_);
   LOG_SENSOR("  ", "Light Level", this->light_sensor_);
-  // Log other entities...
 }
-
-/*
-void MerrytekRadar::update() {
-  // This function is no longer used in passive listening mode.
-}
-*/
 
 void MerrytekRadar::loop() {
   while (available()) {
@@ -91,8 +85,8 @@ void MerrytekRadar::loop() {
 // =================== Frame Handling ===================
 void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   uint8_t function = frame[5];
-  uint8_t data_len = frame[3] - BASE_FRAME_LENGTH;
-  const uint8_t *data = frame.data() + BASE_FRAME_LENGTH;
+  const uint8_t *data = frame.data() + 6;
+  uint8_t data_len = frame.size() - 7; // Total frame size - 6 header bytes - 1 crc byte
 
   ESP_LOGD(TAG, "Received frame: function=0x%02X, data_len=%d", function, data_len);
 
@@ -111,7 +105,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
       break;
     case FUNC_FIRMWARE_VERSION:
       if (this->firmware_version_sensor_ != nullptr && data_len >= 3) {
-        // Assuming format is three bytes for X.Y.Z
         this->firmware_version_sensor_->publish_state(data[0] + (data[1]/10.0f) + (data[2]/100.0f));
       }
       break;
@@ -152,21 +145,33 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   }
 }
 
-// =================== Command Sending ===================
+// =================== Command Sending (CORRECTED) ===================
 void MerrytekRadar::send_command(uint8_t function, const std::vector<uint8_t> &data) {
-  uint8_t payload_len = BASE_FRAME_LENGTH + data.size();
   std::vector<uint8_t> frame;
-  frame.reserve(payload_len + 1);
-
-  frame.push_back(FRAME_HEADER);
-  frame.push_back((this->device_id_ >> 8) & 0xFF);
-  frame.push_back(this->device_id_ & 0xFF);
-  frame.push_back(payload_len);
-  frame.push_back(FRAME_FORMAT);
-  frame.push_back(function);
-  frame.insert(frame.end(), data.begin(), data.end());
+  
+  if (data.empty() && function == FUNC_READ_ALL) {
+    // This is a simple request frame (Read All Data)
+    frame.reserve(BASE_REQUEST_FRAME_LENGTH + 1);
+    frame.push_back(FRAME_HEADER);
+    frame.push_back((this->device_id_ >> 8) & 0xFF);
+    frame.push_back(this->device_id_ & 0xFF);
+    frame.push_back(BASE_REQUEST_FRAME_LENGTH);
+    frame.push_back(FRAME_FORMAT_BYTE); // The Format byte is used in requests
+    frame.push_back(function);
+  } else {
+    // This is a write command, which does not use the FORMAT byte
+    uint8_t payload_len = BASE_WRITE_FRAME_LENGTH + data.size();
+    frame.reserve(payload_len + 1);
+    frame.push_back(FRAME_HEADER);
+    frame.push_back((this->device_id_ >> 8) & 0xFF);
+    frame.push_back(this->device_id_ & 0xFF);
+    frame.push_back(payload_len);
+    frame.push_back(function);
+    frame.insert(frame.end(), data.begin(), data.end());
+  }
 
   frame.push_back(calculate_crc(frame.data(), frame.size()));
+
   this->write_array(frame);
   this->flush();
 }
