@@ -36,7 +36,10 @@ static const uint8_t FUNC_NEAR_ZONE_SHIELDING = 0x33;
 static const uint8_t FRAME_HEADER = 0x51;
 
 // =================== Component Setup and Loop ===================
-void MerrytekRadar::setup() {}
+void MerrytekRadar::setup() {
+  if (this->presence_sensor_ != nullptr) {
+    this->presence_sensor_->publish_state(false); // Initialize HA state
+}}
 
 void MerrytekRadar::dump_config() {
   ESP_LOGCONFIG(TAG, "Merrytek Radar (Passive Listener Mode):");
@@ -70,7 +73,7 @@ void MerrytekRadar::loop() {
     
     std::vector<uint8_t> frame(this->rx_buffer_.begin(), this->rx_buffer_.begin() + total_frame_len);
     uint8_t received_crc = frame.back();
-    uint8_t calculated_crc = calculate_crc(frame.data(), payload_len);
+    uint8_t calculated_crc = calculate_crc(frame.data(), frame.size() - 1); // Exclude CRC byte only
 
     if (received_crc == calculated_crc) {
       uint16_t frame_id = (frame[1] << 8) | frame[2];
@@ -95,6 +98,7 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   const uint8_t *data = frame.data() + 5;
 
   ESP_LOGD(TAG, "Received frame: function=0x%02X, data_len=%d", function, data_len);
+  ESP_LOGD(TAG, "FUNC: 0x%02X | Data[0]: 0x%02X | CRC OK", function, data[0]);
 
   switch (function) {
     case FUNC_WORK_STATE:
