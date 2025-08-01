@@ -1,6 +1,7 @@
 #include "merrytek_radar.h"
 #include "esphome/core/log.h"
 #include <numeric>
+#include <map>
 
 namespace esphome {
 namespace merrytek_radar {
@@ -110,10 +111,8 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   switch (function) {
     case FUNC_WORK_STATE:
       if (data_len >= 1) {
-        // THE FIX: Check specifically for 0x02 for Occupancy, per the documentation.
         bool is_present = (data[0] == 0x02);
         if (this->presence_sensor_ != nullptr) this->presence_sensor_->publish_state(is_present);
-        
         auto it_sw = this->switches_.find(function);
         if (it_sw != this->switches_.end()) it_sw->second->publish_state(is_present);
       }
@@ -128,7 +127,7 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         this->firmware_version_sensor_->publish_state(data[0] + (data[1]/10.0f) + (data[2]/100.0f));
       }
       break;
-    case FUNC_DETECTION_AREA:
+    case FUNC_DETECTION_AREA: // Now handle incoming data for detection area
     case FUNC_BLOCKING_TIME:
     case FUNC_HOLD_TIME:
     case FUNC_DAYLIGHT_THRESHOLD:
@@ -169,8 +168,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
 
 // =================== Command Sending ===================
 void MerrytekRadar::send_command(uint8_t function, const std::vector<uint8_t> &data) {
-  // This is a write command, which does not use the FORMAT byte
-  // Per documentation: [HEAD, ID, LEN, FUNC, VALUE(s)...]
   uint8_t payload_len = 4 + 1 + data.size();
   std::vector<uint8_t> frame;
   frame.reserve(payload_len + 1);
@@ -215,11 +212,33 @@ void MerrytekSwitch::write_state(bool state) {
 }
 
 void MerrytekSelect::control(const std::string &value) {
-    auto index = this->index_of(value);
-    if(index.has_value()){
-        this->publish_state(value);
-        this->parent_->send_command(this->function_code_, {static_cast<uint8_t>(index.value())});
+    this->publish_state(value);
+    uint8_t value_to_send = 0;
+
+    if (this->function_code_ == FUNC_DETECTION_AREA) {
+        // Special mapping for Detection Area based on the documentation
+        static const std::map<std::string, uint8_t> MAPPING = {
+            {"0m", 0x00}, {"0.5m", 0x01}, {"1m", 0x03}, {"1.5m", 0x07},
+            {"2m", 0x0F}, {"2.5m", 0x1F}, {"3m", 0x3F}, {"3.5m", 0x7F}, {"4m", 0xFF}
+        };
+        auto it = MAPPING.find(value);
+        if (it != MAPPING.end()) {
+            value_to_send = it->second;
+        } else {
+            ESP_LOGW(TAG, "Invalid option '%s' for Detection Area", value.c_str());
+            return; // Don't send a command if the option is not found
+        }
+    } else {
+        // Default behavior for other selects (like sensitivity)
+        auto index = this->index_of(value);
+        if (index.has_value()) {
+            value_to_send = *index;
+        } else {
+            return; // Invalid option
+        }
     }
+
+    this->parent_->send_command(this->function_code_, {value_to_send});
 }
 
 void MerrytekButton::press_action() { this->parent_->send_command(this->function_code_, this->data_); }
