@@ -6,10 +6,12 @@ from . import MerrytekSelect, MerrytekRadar
 
 # Define supported select entities and their function codes
 CONF_NEAR_ZONE_SHIELDING = "near_zone_shielding"
+CONF_DETECTION_AREA = "detection_area"
 
 SELECTS = {
     CONF_SENSITIVITY: (0x06, ["Low", "High", "Medium"]),
     CONF_NEAR_ZONE_SHIELDING: (0x33, ["0m", "0.6m", "1.2m", "1.6m"]),
+    CONF_DETECTION_AREA: (0x05, ["0m", "0.5m", "1m", "1.5m", "2m", "2.5m", "3m", "3.5m", "4m"]),
 }
 
 # Define the configuration schema for select entities
