@@ -62,7 +62,7 @@ void MerrytekRadar::loop() {
     }
 
     uint8_t payload_len = this->rx_buffer_[3];
-    if(payload_len < 6) { // A valid frame must have at least 6 bytes (HEAD,ID,LEN,FUNC,VAL,CRC)
+    if(payload_len < 5) { // A valid frame must have at least 6 bytes (HEAD,ID,LEN,FUNC,VAL,CRC)
         this->rx_buffer_.erase(this->rx_buffer_.begin());
         continue;
     }
@@ -81,7 +81,8 @@ void MerrytekRadar::loop() {
         this->handle_frame(frame);
       }
     } else {
-      ESP_LOGW(TAG, "CRC Check Failed! Got 0x%02X, calculated 0x%02X", received_crc, calculated_crc);
+      ESP_LOGW(TAG, "CRC failed: received=0x%02X calculated=0x%02X", received_crc, calculated_crc);
+      ESP_LOGW(TAG, "Raw frame: %s", format_hex_pretty(frame).c_str());
     }
     
     this->rx_buffer_.erase(this->rx_buffer_.begin(), this->rx_buffer_.begin() + total_frame_len);
@@ -93,8 +94,7 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   // Simplified parsing based on consistent documentation: [HEAD, ID, LEN, FUNC, DATA..., CRC]
   uint8_t function = frame[4];
   uint8_t payload_len = frame[3];
-  // Data starts at index 5. Number of data bytes is payload_len - 5 (HEAD=1, ID=2, LEN=1, FUNC=1).
-  uint8_t data_len = payload_len - 5;
+  uint8_t data_len = frame[3] - 4;
   const uint8_t *data = frame.data() + 5;
 
   ESP_LOGD(TAG, "Received frame: function=0x%02X, data_len=%d", function, data_len);
