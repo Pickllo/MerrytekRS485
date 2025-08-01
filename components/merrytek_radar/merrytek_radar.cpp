@@ -31,6 +31,7 @@ static const uint8_t FUNC_SINGLE_PERSON_MODE = 0x31;
 static const uint8_t FUNC_LIGHT_SENSING_MODE = 0x32;
 static const uint8_t FUNC_NEAR_ZONE_SHIELDING = 0x33;
 
+
 // --- Frame Constants ---
 static const uint8_t FRAME_HEADER = 0x51;
 
@@ -38,7 +39,7 @@ static const uint8_t FRAME_HEADER = 0x51;
 void MerrytekRadar::setup() {}
 
 void MerrytekRadar::dump_config() {
-  ESP_LOGCONFIG(TAG, "Merrytek Radar:");
+  ESP_LOGCONFIG(TAG, "Merrytek Radar (Passive Listener Mode):");
   ESP_LOGCONFIG(TAG, "  Device ID: 0x%04X", this->device_id_);
   LOG_BINARY_SENSOR("  ", "Presence", this->presence_sensor_);
   LOG_SENSOR("  ", "Light Level", this->light_sensor_);
@@ -58,7 +59,7 @@ void MerrytekRadar::loop() {
     }
 
     uint8_t payload_len = this->rx_buffer_[3];
-    if(payload_len < 6) { // A valid frame must have at least 6 bytes
+    if(payload_len < 6) { // A valid frame must have at least 6 bytes (HEAD,ID,LEN,FUNC,VAL,CRC)
         this->rx_buffer_.erase(this->rx_buffer_.begin());
         continue;
     }
@@ -84,7 +85,7 @@ void MerrytekRadar::loop() {
   }
 }
 
-// =================== Frame Handling (SIMPLIFIED AND CORRECTED) ===================
+// =================== Frame Handling ===================
 void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   // Simplified parsing based on consistent documentation: [HEAD, ID, LEN, FUNC, DATA..., CRC]
   uint8_t function = frame[4];
@@ -98,7 +99,7 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   switch (function) {
     case FUNC_WORK_STATE:
       if (data_len >= 1) {
-        // Check specifically for 0x02 for Occupancy, per the documentation.
+        // The final, correct logic: 0x02 means Occupancy.
         bool is_present = (data[0] == 0x02);
         if (this->presence_sensor_ != nullptr) {
             this->presence_sensor_->publish_state(is_present);
@@ -106,7 +107,7 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
       }
       break;
 
-    // The rest of the cases for other entities remain the same as before
+    // The rest of the cases for other entities remain the same
     case FUNC_LIGHT_SENSOR:
       if (this->light_sensor_ != nullptr && data_len >= 2) {
         this->light_sensor_->publish_state((data[0] << 8) | data[1]);
@@ -148,7 +149,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
 
 // =================== Command Sending ===================
 void MerrytekRadar::send_command(uint8_t function, const std::vector<uint8_t> &data) {
-  // [HEAD, ID, LEN, FUNC, VALUE(s)...]
   uint8_t payload_len = 5 + data.size(); // 5 bytes for HEAD, IDx2, LEN, FUNC
   std::vector<uint8_t> frame;
   frame.reserve(payload_len + 1);
@@ -197,7 +197,6 @@ void MerrytekSelect::control(const std::string &value) {
     uint8_t value_to_send = 0;
 
     if (this->function_code_ == FUNC_DETECTION_AREA) {
-        // Special mapping for Detection Area based on the documentation
         static const std::map<std::string, uint8_t> MAPPING = {
             {"0m", 0x00}, {"0.5m", 0x01}, {"1m", 0x03}, {"1.5m", 0x07},
             {"2m", 0x0F}, {"2.5m", 0x1F}, {"3m", 0x3F}, {"3.5m", 0x7F}, {"4m", 0xFF}
@@ -210,7 +209,6 @@ void MerrytekSelect::control(const std::string &value) {
             return;
         }
     } else {
-        // Default behavior for other selects (like sensitivity)
         auto index = this->index_of(value);
         if (index.has_value()) {
             value_to_send = *index;
