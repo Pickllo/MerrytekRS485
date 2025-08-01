@@ -32,9 +32,8 @@ static const uint8_t FUNC_NEAR_ZONE_SHIELDING = 0x33;
 
 // --- Frame Constants ---
 static const uint8_t FRAME_HEADER = 0x51;
-static const uint8_t FRAME_FORMAT_BYTE = 0x00;
-static const uint8_t BASE_REQUEST_FRAME_LENGTH = 6;
-static const uint8_t BASE_WRITE_FRAME_LENGTH = 5;
+static const uint8_t FRAME_FORMAT_REQUEST = 0x00;
+static const uint8_t BASE_FRAME_LENGTH = 6;
 
 // =================== Component Setup and Loop ===================
 void MerrytekRadar::setup() {}
@@ -60,6 +59,10 @@ void MerrytekRadar::loop() {
     }
 
     uint8_t payload_len = this->rx_buffer_[3];
+    if(payload_len == 0) { // Sanity check for invalid length
+        this->rx_buffer_.erase(this->rx_buffer_.begin());
+        continue;
+    }
     uint8_t total_frame_len = payload_len + 1;
     if (this->rx_buffer_.size() < total_frame_len) {
       return;
@@ -84,18 +87,35 @@ void MerrytekRadar::loop() {
 
 // =================== Frame Handling ===================
 void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
-  uint8_t function = frame[5];
-  const uint8_t *data = frame.data() + 6;
-  uint8_t data_len = frame.size() - 7; // Total frame size - 6 header bytes - 1 crc byte
+  // Logic to determine function and data position. Handles different frame formats.
+  uint8_t function_pos = 5; 
+  if (frame.size() > 5 && frame[4] != FRAME_FORMAT_REQUEST) {
+      function_pos = 4;
+  } else if (frame.size() <= 5) {
+      function_pos = 4;
+  }
+  
+  if(frame.size() <= function_pos) {
+    ESP_LOGW(TAG, "Received malformed frame, too short.");
+    return;
+  }
+
+  uint8_t function = frame[function_pos];
+  uint8_t base_len = function_pos + 1;
+  uint8_t data_len = frame[3] - base_len;
+  const uint8_t *data = frame.data() + base_len;
 
   ESP_LOGD(TAG, "Received frame: function=0x%02X, data_len=%d", function, data_len);
 
   switch (function) {
     case FUNC_WORK_STATE:
       if (data_len >= 1) {
-        if (this->presence_sensor_ != nullptr) this->presence_sensor_->publish_state(data[0] == 1);
+        // THE FIX: Check specifically for 0x02 for Occupancy, per the documentation.
+        bool is_present = (data[0] == 0x02);
+        if (this->presence_sensor_ != nullptr) this->presence_sensor_->publish_state(is_present);
+        
         auto it_sw = this->switches_.find(function);
-        if (it_sw != this->switches_.end()) it_sw->second->publish_state(data[0] == 1);
+        if (it_sw != this->switches_.end()) it_sw->second->publish_state(is_present);
       }
       break;
     case FUNC_LIGHT_SENSOR:
@@ -138,40 +158,30 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
     case FUNC_NEAR_ZONE_SHIELDING: {
       auto it_sel = this->selects_.find(function);
       if (it_sel != this->selects_.end() && data_len >= 1) {
-        it_sel->second->publish_state(it_sel->second->at(data[0]).value());
+        if(data[0] < it_sel->second->size()){
+          it_sel->second->publish_state(it_sel->second->at(data[0]).value());
+        }
       }
       break;
     }
   }
 }
 
-// =================== Command Sending (CORRECTED) ===================
+// =================== Command Sending ===================
 void MerrytekRadar::send_command(uint8_t function, const std::vector<uint8_t> &data) {
+  // This is a write command, which does not use the FORMAT byte
+  // Per documentation: [HEAD, ID, LEN, FUNC, VALUE(s)...]
+  uint8_t payload_len = 4 + 1 + data.size();
   std::vector<uint8_t> frame;
-  
-  if (data.empty() && function == FUNC_READ_ALL) {
-    // This is a simple request frame (Read All Data)
-    frame.reserve(BASE_REQUEST_FRAME_LENGTH + 1);
-    frame.push_back(FRAME_HEADER);
-    frame.push_back((this->device_id_ >> 8) & 0xFF);
-    frame.push_back(this->device_id_ & 0xFF);
-    frame.push_back(BASE_REQUEST_FRAME_LENGTH);
-    frame.push_back(FRAME_FORMAT_BYTE); // The Format byte is used in requests
-    frame.push_back(function);
-  } else {
-    // This is a write command, which does not use the FORMAT byte
-    uint8_t payload_len = BASE_WRITE_FRAME_LENGTH + data.size();
-    frame.reserve(payload_len + 1);
-    frame.push_back(FRAME_HEADER);
-    frame.push_back((this->device_id_ >> 8) & 0xFF);
-    frame.push_back(this->device_id_ & 0xFF);
-    frame.push_back(payload_len);
-    frame.push_back(function);
-    frame.insert(frame.end(), data.begin(), data.end());
-  }
+  frame.reserve(payload_len + 1);
+  frame.push_back(FRAME_HEADER);
+  frame.push_back((this->device_id_ >> 8) & 0xFF);
+  frame.push_back(this->device_id_ & 0xFF);
+  frame.push_back(payload_len);
+  frame.push_back(function);
+  frame.insert(frame.end(), data.begin(), data.end());
 
   frame.push_back(calculate_crc(frame.data(), frame.size()));
-
   this->write_array(frame);
   this->flush();
 }
