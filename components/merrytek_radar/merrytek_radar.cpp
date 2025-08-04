@@ -97,12 +97,8 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
 
   switch (function) {
     case FUNC_WORK_STATE:
-      if (data_len >= 1) {
-        // The final, correct logic: 0x02 means Occupancy.
-        bool is_present = (data[0] == 0x02);
-        if (this->presence_sensor_ != nullptr) {
-            this->presence_sensor_->publish_state(is_present);
-        }
+      if (function == FUNC_WORK_STATE && data_len >= 1 && this->presence_sensor_ != nullptr) {
+          this->presence_sensor_->publish_state(data[0] == 0x02);
       }
       break;
 
@@ -222,4 +218,3 @@ void MerrytekButton::press_action() { this->parent_->send_command(this->function
 
 }  // namespace merrytek_radar
 }  // namespace esphome
-
