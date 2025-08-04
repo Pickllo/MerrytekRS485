@@ -73,9 +73,10 @@ void MerrytekRadar::loop() {
 
     if (received_crc == calculated_crc) {
       uint16_t frame_id = (frame[1] << 8) | frame[2];
-      if (this->device_id_ == 0x0000 || frame_id == this->device_id_) {
-        this->handle_frame(frame);
-      }
+      ESP_LOGD(TAG, "Frame ID: 0x%04X, Device ID: 0x%04X", frame_id, this->device_id_);
+      // if (this->device_id_ == 0x0000 || frame_id == this->device_id_) {
+      this->handle_frame(frame);
+      // }
     } else {
       ESP_LOGW(TAG, "CRC Check Failed! Got 0x%02X, calculated 0x%02X", received_crc, calculated_crc);
     }
@@ -224,14 +225,3 @@ void MerrytekButton::press_action() { this->parent_->send_command(this->function
 
 }  // namespace merrytek_radar
 }  // namespace esphome
-
-
-
-
-
-
-
-
-
-
-
