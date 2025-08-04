@@ -97,10 +97,9 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
 
   switch (function) {
     case FUNC_WORK_STATE:
-        if (data_len >= 1) {
-          bool is_present = (data[0] == 0x02);
-          this->presence_sensor_->publish_state(is_present);
-          ESP_LOGD("merrytek", "Work state: %s", is_present ? "Occupied" : "Vacant");            
+        if (data_len >= 1 && data[0] == 0x02) {
+          this->presence_sensor_->publish_state(true);
+          // ESP_LOGD("merrytek", "Work state: %s", true ? "Occupied" : "Vacant");            
       }
       break;
 
@@ -220,6 +219,7 @@ void MerrytekButton::press_action() { this->parent_->send_command(this->function
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
 
 
