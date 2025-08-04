@@ -69,7 +69,7 @@ void MerrytekRadar::loop() {
     
     std::vector<uint8_t> frame(this->rx_buffer_.begin(), this->rx_buffer_.begin() + total_frame_len);
     uint8_t received_crc = frame.back();
-    uint8_t calculated_crc = calculate_crc(frame.data(), payload_len);
+    uint8_t calculated_crc = calculate_crc(frame.data(), frame.size() - 1);
 
     if (received_crc == calculated_crc) {
       uint16_t frame_id = (frame[1] << 8) | frame[2];
@@ -224,6 +224,7 @@ void MerrytekButton::press_action() { this->parent_->send_command(this->function
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
 
 
