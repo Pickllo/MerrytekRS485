@@ -58,10 +58,15 @@ void MerrytekRadar::loop() {
     }
 
     uint8_t payload_len = this->rx_buffer_[3];
-    if(payload_len < 6) { // A valid frame must have at least 6 bytes
-        this->rx_buffer_.erase(this->rx_buffer_.begin());
-        continue;
+    // --- FIX START ---
+    // The minimum payload_len is 5 (for a frame with 0 data bytes).
+    if(payload_len < 5) { 
+      ESP_LOGW(TAG, "Invalid frame: payload_len (%d) is less than minimum (5). Discarding.", payload_len);
+      this->rx_buffer_.erase(this->rx_buffer_.begin());
+      continue;
     }
+    // --- FIX END ---
+
     uint8_t total_frame_len = payload_len + 1;
     if (this->rx_buffer_.size() < total_frame_len) {
       return;
@@ -72,11 +77,7 @@ void MerrytekRadar::loop() {
     uint8_t calculated_crc = calculate_crc(frame.data(), frame.size() - 1);
 
     if (received_crc == calculated_crc) {
-      uint16_t frame_id = (frame[1] << 8) | frame[2];
-      ESP_LOGD(TAG, "Frame ID: 0x%04X, Device ID: 0x%04X", frame_id, this->device_id_);
-      // if (this->device_id_ == 0x0000 || frame_id == this->device_id_) {
       this->handle_frame(frame);
-      // }
     } else {
       ESP_LOGW(TAG, "CRC Check Failed! Got 0x%02X, calculated 0x%02X", received_crc, calculated_crc);
     }
@@ -87,10 +88,8 @@ void MerrytekRadar::loop() {
 
 // =================== Frame Handling ===================
 void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
-  // Simplified parsing based on consistent documentation: [HEAD, ID, LEN, FUNC, DATA..., CRC]
   uint8_t function = frame[4];
   uint8_t payload_len = frame[3];
-  // Data starts at index 5. Number of data bytes is payload_len - 5 (HEAD=1, ID=2, LEN=1, FUNC=1).
   uint8_t data_len = payload_len - 5;
   const uint8_t *data = frame.data() + 5;
 
@@ -99,14 +98,14 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   switch (function) {
     case FUNC_WORK_STATE:
       if (data_len >= 1) {
-        ESP_LOGD("merrytek", "FUNC_WORK_STATE triggered, raw value: 0x%02X", data[0]);
-        bool is_present = (data[0] == 0x02);  // 0x02 = Occupancy
+        ESP_LOGD(TAG, "FUNC_WORK_STATE triggered, raw value: 0x%02X", data[0]);
+        bool is_present = (data[0] == 0x02); // 0x02 = Occupancy
         if (this->presence_sensor_ != nullptr) {
           this->presence_sensor_->publish_state(is_present);
-          ESP_LOGD("merrytek", "Presence state published: %s", is_present ? "Occupied" : "Vacant");
+          ESP_LOGD(TAG, "Presence state published: %s", is_present ? "Occupied" : "Vacant");
         }
       } else {
-        ESP_LOGW("merrytek", "FUNC_WORK_STATE triggered but insufficient data length: %d", data_len);
+        ESP_LOGW(TAG, "FUNC_WORK_STATE triggered but insufficient data length: %d", data_len);
       }
       break;
     case FUNC_LIGHT_SENSOR:
