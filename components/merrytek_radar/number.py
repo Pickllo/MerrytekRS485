@@ -1,7 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import number
-from esphome.const import (CONF_ID, CONF_TYPE,CONF_ADDRESS,)
+from esphome.const import (CONF_ID, CONF_TYPE,CONF_ADDRESS,CONF_MAX_VALUE,CONF_MIN_VALUE,CONF_STEP,)
 from . import merrytek_radar_ns, MerrytekRadar, MerrytekNumber
 
 # Define supported number entities and their function codes
@@ -43,6 +43,7 @@ async def to_code(config):
     function_code = NUMBERS[number_type]
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_number(config[CONF_ADDRESS], function_code, var))
+
 
 
 
