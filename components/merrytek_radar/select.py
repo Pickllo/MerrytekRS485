@@ -29,10 +29,11 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     select_type = config[CONF_TYPE]
     function_code, options = SELECTS[select_type]
-    config[CONF_OPTIONS] = options
-    await select.register_select(var, config)
+    await select.register_select(var, config, options=options)
+    await cg.register_component(var, config)
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var))
+
 
 
 
