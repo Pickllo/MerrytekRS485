@@ -25,7 +25,7 @@ PLATFORM_SCHEMA = number.NUMBER_SCHEMA.extend({
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*NUMBERS, lower=True),
     cv.GenerateID(CONF_ID): cv.declare_id(MerrytekNumber),
-}).extend(cv.PLATFORM_SCHEMA)
+})
 # Generate C++ code
 async def to_code(config):
     parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
@@ -36,6 +36,7 @@ async def to_code(config):
     function_code = NUMBERS[number_type]
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_number(config[CONF_ADDRESS], function_code, var))
+
 
 
 
