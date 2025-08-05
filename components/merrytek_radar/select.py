@@ -7,6 +7,7 @@ from . import merrytek_radar_ns, MerrytekRadar, MerrytekSelect
 # Define supported select entities and their function codes
 CONF_NEAR_ZONE_SHIELDING = "near_zone_shielding"
 CONF_SENSITIVITY= "sensitivity" 
+CONF_SENSITIVITY= "detection_area" 
 CONF_MERRYTEK_RADAR_ID = "merrytek_radar_id"
 
 SELECTS = {
@@ -32,6 +33,7 @@ async def to_code(config):
     await select.register_select(var, config)
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var))
+
 
 
 
