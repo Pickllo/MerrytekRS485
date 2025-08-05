@@ -1,44 +1,36 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import uart, switch, number, select, button
-from esphome.const import CONF_ID
-
-# Declare all the components our hub depends on
-DEPENDENCIES = ['uart', 'binary_sensor', 'sensor', 'number', 'switch', 'select', 'button']
+from esphome.components import uart
+from esphome.const import CONF_ID, CONF_ADDRESS, CONF_MODEL, CONF_NAME
 
 # Declare the component's namespace
 CODEOWNERS = ["@Pickllo"]
 merrytek_radar_ns = cg.esphome_ns.namespace("merrytek_radar")
-
-# Declare the HUB class - REMOVED PollingComponent
 MerrytekRadar = merrytek_radar_ns.class_(
-    "MerrytekRadar", cg.Component, uart.UARTDevice
+    "MerrytekRadar", cg.PollingComponent, cg.UARTComponent
 )
 
-# Declare the custom entity classes that live in the C++ code
-MerrytekSwitch = merrytek_radar_ns.class_("MerrytekSwitch", switch.Switch, cg.Component)
-MerrytekNumber = merrytek_radar_ns.class_("MerrytekNumber", number.Number, cg.Component)
-MerrytekSelect = merrytek_radar_ns.class_("MerrytekSelect", select.Select, cg.Component)
-MerrytekButton = merrytek_radar_ns.class_("MerrytekButton", button.Button, cg.Component)
+MODELS = ["msa237d", "msa236d"]
 
-# Define our custom configuration key
-CONF_DEVICE_ID = "device_id"
+DEVICE_SCHEMA = cv.Schema({
+    cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
+    cv.Required(CONF_MODEL): cv.one_of(*MODELS, lower=True),
+    cv.Required(CONF_NAME): cv.string,
+})
+# Define the configuration schema
+CONFIG_SCHEMA = cv.Schema({
+    cv.GenerateID(): cv.declare_id(MerrytekRadar),
+    
+    # The new, required way to define devices
+    cv.Required("devices"): cv.ensure_list(DEVICE_SCHEMA),
 
-# Define the configuration schema for the main hub - REMOVED polling_component_schema
-CONFIG_SCHEMA = (
-    cv.Schema(
-        {
-            cv.GenerateID(): cv.declare_id(MerrytekRadar),
-            cv.Required(CONF_DEVICE_ID): cv.hex_uint16_t,
-        }
-    )
-    .extend(cv.COMPONENT_SCHEMA)
-    .extend(uart.UART_DEVICE_SCHEMA)
-)
+}).extend(cv.polling_component_schema("60s")).extend(uart.UART_DEVICE_SCHEMA)
 
-# Define the coroutine to generate the C++ code for the main hub
+
+# Define the coroutine to generate the C++ code
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
-    cg.add(var.set_device_id(config[CONF_DEVICE_ID]))
+    for device_conf in config["devices"]:
+        cg.add(var.register_device(device_conf[CONF_NAME], device_conf[CONF_ADDRESS], device_conf[CONF_MODEL], ))
