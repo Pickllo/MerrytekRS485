@@ -19,7 +19,7 @@ PLATFORM_SCHEMA = binary_sensor.BINARY_SENSOR_SCHEMA.extend({
     cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*BINARY_SENSORS, lower=True),
-}).extend(cv.PLATFORM_SCHEMA)
+})
 # Generate C++ code
 async def to_code(config):
     parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
@@ -28,6 +28,7 @@ async def to_code(config):
     if sensor_type == CONF_PRESENCE:
         cg.add(var.set_device_class(DEVICE_CLASS_OCCUPANCY))
     cg.add(parent.register_binary_sensor(config[CONF_ADDRESS], sensor_type, var))
+
 
 
 
