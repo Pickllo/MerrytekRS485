@@ -14,7 +14,7 @@ SELECTS = {
     CONF_NEAR_ZONE_SHIELDING: (0x33, ["0m", "0.6m", "1.2m", "1.6m"]),
 }
 
-PLATFORM_SCHEMA = select.SELECT_SCHEMA.extend({
+CONFIG_SCHEMA = select.SELECT_SCHEMA.extend({
     cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*SELECTS, lower=True),
@@ -31,6 +31,7 @@ async def to_code(config):
     await select.register_select(var, config)
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var))
+
 
 
 
