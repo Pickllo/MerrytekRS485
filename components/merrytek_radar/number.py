@@ -30,12 +30,12 @@ CONFIG_SCHEMA = number.NUMBER_SCHEMA.extend({
 async def to_code(config):
     parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
     var = cg.new_Pvariable(config[CONF_ID])
-        await number.register_number(
-        var,
-        config,
-        min_value=config[CONF_MIN_VALUE],
-        max_value=config[CONF_MAX_VALUE],
-        step=config[CONF_STEP],
+    await number.register_number(
+    var,
+    config,
+    min_value=config[CONF_MIN_VALUE],
+    max_value=config[CONF_MAX_VALUE],
+    step=config[CONF_STEP],
     )
     await number.register_number(var, config)
 
@@ -43,6 +43,7 @@ async def to_code(config):
     function_code = NUMBERS[number_type]
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_number(config[CONF_ADDRESS], function_code, var))
+
 
 
 
