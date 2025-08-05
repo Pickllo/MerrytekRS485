@@ -20,10 +20,12 @@ static const uint8_t FUNC_LUX_DIFFERENCE_THRESHOLD = 0x0A;
 static const uint8_t FUNC_HOLD_TIME = 0x0D;
 static const uint8_t FUNC_FIRMWARE_VERSION = 0x17;
 static const uint8_t FUNC_DEVICE_ID = 0x18;
+static const uint8_t FUNC_DAYLIGHT_COMPENSATION = 0x20;
 static const uint8_t FUNC_ID_EDIT_STATUS = 0x21;
 static const uint8_t FUNC_REPORT_QUERY_MODE = 0x22;
 static const uint8_t FUNC_FLIP_STATUS = 0x23;
 static const uint8_t FUNC_DAYLIGHT_THRESHOLD = 0x25;
+static const uint8_t FUNC_SENSOR_ACTIVATION = 0x26;
 static const uint8_t FUNC_PRESENCE_DETECTION_ENABLE = 0x28;
 static const uint8_t FUNC_ENVIRONMENTAL_SELF_LEARNING = 0x29;
 static const uint8_t FUNC_FACTORY_RESET = 0x30;
@@ -31,23 +33,55 @@ static const uint8_t FUNC_SINGLE_PERSON_MODE = 0x31;
 static const uint8_t FUNC_LIGHT_SENSING_MODE = 0x32;
 static const uint8_t FUNC_NEAR_ZONE_SHIELDING = 0x33;
 
-// --- Frame Constants ---
 static const uint8_t FRAME_HEADER = 0x51;
 
-// =================== Component Setup and Loop ===================
-void MerrytekRadar::setup() {}
+void MerrytekRadar::register_device(const std::string &name, uint16_t address, const std::string &model) {
+  // Log that we're creating a new device.
+  ESP_LOGD(TAG, "Registering device: %s (Address: 0x%04X, Model: %s)", name.c_str(), address, model.c_str());
+
+  // Create a new RadarDevice struct
+  RadarDevice new_device;
+  new_device.name = name;
+  new_device.address = address;
+  new_device.model = model;
+
+  // Add the newly created device to our map, using its address as the key.
+  this->devices_[address] = new_device;
+}
 
 void MerrytekRadar::dump_config() {
-  ESP_LOGCONFIG(TAG, "Merrytek Radar (Passive Listener Mode):");
-  ESP_LOGCONFIG(TAG, "  Device ID: 0x%04X", this->device_id_);
-  LOG_BINARY_SENSOR("  ", "Presence", this->presence_sensor_);
-  LOG_SENSOR("  ", "Light Level", this->light_sensor_);
+  ESP_LOGCONFIG(TAG, "Merrytek Radar Bus Manager:");
+  ESP_LOGCONFIG(TAG, "  UART Bus: %s", this->get_uart_bus_id().c_str());
+
+  if (this->devices_.empty()) {
+    ESP_LOGCONFIG(TAG, "  No devices configured.");
+    return;
+  }
+
+  ESP_LOGCONFIG(TAG, "  Configured Devices:");
+  for (auto const &[address, device] : this->devices_) {
+    ESP_LOGCONFIG(TAG, "    - Device: '%s'", device.name.c_str());
+    ESP_LOGCONFIG(TAG, "      Address: 0x%04X", device.address);
+    ESP_LOGCONFIG(TAG, "      Model: %s", device.model.c_str());
+  }
+}
+
+void MerrytekRadar::setup() {
+  ESP_LOGI(TAG, "Initializing Merrytek Radar Bus Manager...");
+}
+
+// update() is called by the PollingComponent on a schedule.
+void MerrytekRadar::update() {
+  // For now, this will be empty.
+  // In the future, we could add logic here to actively send a "read data"
+  // command to all devices on the bus if they are in a polling mode.
+  // ESP_LOGD(TAG, "Polling update triggered.");
 }
 
 void MerrytekRadar::loop() {
-  while (available()) {
+  while (this->available()) {
     uint8_t byte;
-    read_byte(&byte);
+    this->read_byte(&byte);
     this->rx_buffer_.push_back(byte);
   }
 
@@ -58,108 +92,161 @@ void MerrytekRadar::loop() {
     }
 
     uint8_t payload_len = this->rx_buffer_[3];
-    // --- FIX START ---
-    // The minimum payload_len is 5 (for a frame with 0 data bytes).
-    if(payload_len < 5) { 
-      ESP_LOGW(TAG, "Invalid frame: payload_len (%d) is less than minimum (5). Discarding.", payload_len);
+    if (payload_len < 5) {
       this->rx_buffer_.erase(this->rx_buffer_.begin());
       continue;
     }
-    // --- FIX END ---
-
     uint8_t total_frame_len = payload_len + 1;
     if (this->rx_buffer_.size() < total_frame_len) {
       return;
     }
-    
+
     std::vector<uint8_t> frame(this->rx_buffer_.begin(), this->rx_buffer_.begin() + total_frame_len);
     uint8_t received_crc = frame.back();
-    uint8_t calculated_crc = calculate_crc(frame.data(), frame.size() - 1);
+    uint8_t calculated_crc = this->calculate_crc(frame.data(), frame.size() - 1);
 
     if (received_crc == calculated_crc) {
       this->handle_frame(frame);
     } else {
       ESP_LOGW(TAG, "CRC Check Failed! Got 0x%02X, calculated 0x%02X", received_crc, calculated_crc);
     }
-    
+
     this->rx_buffer_.erase(this->rx_buffer_.begin(), this->rx_buffer_.begin() + total_frame_len);
   }
 }
 
-// =================== Frame Handling ===================
 void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
+  uint16_t frame_id = (frame[1] << 8) | frame[2];
+  auto it = this->devices_.find(frame_id);
+  if (it == this->devices_.end()) {
+    // We received a valid frame, but it's not for any device we have configured.
+    ESP_LOGV(TAG, "Ignoring frame from unconfigured address 0x%04X", frame_id);
+    return;
+  }
+  RadarDevice &device = it->second;
   uint8_t function = frame[4];
   uint8_t payload_len = frame[3];
   uint8_t data_len = payload_len - 5;
   const uint8_t *data = frame.data() + 5;
 
-  ESP_LOGD(TAG, "Received frame: function=0x%02X, data_len=%d", function, data_len);
+  ESP_LOGD(TAG, "Received frame for device '%s' (Address: 0x%04X, Model: %s, Function: 0x%02X)",
+           device.name.c_str(), device.address, device.model.c_str(), function);
 
-  switch (function) {
-    case FUNC_WORK_STATE:
-      if (data_len >= 1) {
-        ESP_LOGD(TAG, "FUNC_WORK_STATE triggered, raw value: 0x%02X", data[0]);
-        bool is_present = (data[0] == 0x02); // 0x02 = Occupancy
-        if (this->presence_sensor_ != nullptr) {
-          this->presence_sensor_->publish_state(is_present);
-          ESP_LOGD(TAG, "Presence state published: %s", is_present ? "Occupied" : "Vacant");
+  if (device.model == "msa236d") {
+    switch (function) {
+      case FUNC_WORK_STATE:
+        if (data_len >= 1 && device.presence_sensor_ != nullptr) {
+          bool is_present = (data[0] == 0x02);  // 0x02 = Occupancy
+          device.presence_sensor_->publish_state(is_present);
         }
-      } else {
-        ESP_LOGW(TAG, "FUNC_WORK_STATE triggered but insufficient data length: %d", data_len);
-      }
-      break;
-    case FUNC_LIGHT_SENSOR:
-      if (this->light_sensor_ != nullptr && data_len >= 2) {
-        this->light_sensor_->publish_state((data[0] << 8) | data[1]);
-      }
-      break;
-    case FUNC_DETECTION_AREA:
-    case FUNC_HOLD_TIME: {
-      auto it_num = this->numbers_.find(function);
-      if (it_num != this->numbers_.end() && data_len >= 1) {
+        break;
+      case FUNC_LIGHT_SENSOR:
+      case FUNC_FIRMWARE_VERSION: {
+        auto it_sens = device.sensors_.find(function);
+        if (it_sens != device.sensors_.end() && data_len >= 1) {
           uint32_t value = 0;
-          for(int i=0; i<data_len; ++i) {
+          for (int i = 0; i < data_len; ++i) {
+            value = (value << 8) | data[i];
+          }
+          it_sens->second->publish_state(value);
+        }
+        break;
+      }
+      case FUNC_DETECTION_AREA:
+      case FUNC_HOLD_TIME: {
+        auto it_num = device.numbers_.find(function);
+        if (it_num != device.numbers_.end() && data_len >= 1) {
+          uint32_t value = 0;
+          for (int i = 0; i < data_len; ++i) {
             value = (value << 8) | data[i];
           }
           it_num->second->publish_state(value);
-      }
-      break;
-    }
-    case FUNC_LED_INDICATOR:
-    case FUNC_REPORT_QUERY_MODE:
-    case FUNC_PRESENCE_DETECTION_ENABLE: {
-      auto it_sw = this->switches_.find(function);
-      if (it_sw != this->switches_.end() && data_len >= 1) {
-          it_sw->second->publish_state(data[0] == 1);
-      }
-      break;
-    }
-    case FUNC_SENSITIVITY:
-    case FUNC_NEAR_ZONE_SHIELDING: {
-      auto it_sel = this->selects_.find(function);
-      if (it_sel != this->selects_.end() && data_len >= 1) {
-        if(data[0] < it_sel->second->size()){
-          it_sel->second->publish_state(it_sel->second->at(data[0]).value());
         }
+        break;
       }
-      break;
+      case FUNC_LED_INDICATOR:
+      case FUNC_REPORT_QUERY_MODE:
+      case FUNC_PRESENCE_DETECTION_ENABLE: {
+        auto it_sw = device.switches_.find(function);
+        if (it_sw != device.switches_.end() && data_len >= 1) {
+          it_sw->second->publish_state(data[0] == 1);
+        }
+        break;
+      }
+    }
+  } else if (device.model == "msa237d") {
+    switch (function) {
+      case FUNC_WORK_STATE:
+        if (data_len >= 1) {
+          bool is_present = (data[0] == 0x02);
+          if (device.presence_sensor_ != nullptr) {
+            device.presence_sensor_->publish_state(is_present);
+          }
+        }
+        break;
+      case FUNC_LIGHT_SENSOR:
+      case FUNC_LUX_DIFFERENCE_THRESHOLD:
+      case FUNC_FIRMWARE_VERSION: {
+        auto it_sens = device.sensors_.find(function);
+        if (it_sens != device.sensors_.end() && data_len >= 1) {
+          // Logic to parse value (can be reused from your number parser)
+          uint32_t value = 0;
+          for (int i = 0; i < data_len; ++i) {
+            value = (value << 8) | data[i];
+          }
+          it_sens->second->publish_state(value);
+        }
+        break;
+      }
+      case FUNC_DETECTION_AREA:
+      case FUNC_HOLD_TIME: {
+        auto it_num = device.numbers_.find(function);
+        if (it_num != device.numbers_.end() && data_len >= 1) {
+          uint32_t value = 0;
+          for (int i = 0; i < data_len; ++i) {
+            value = (value << 8) | data[i];
+          }
+          it_num->second->publish_state(value);
+        }
+        break;
+      }
+      case FUNC_LED_INDICATOR:
+      case FUNC_REPORT_QUERY_MODE:
+      case FUNC_PRESENCE_DETECTION_ENABLE: {
+        auto it_sw = device.switches_.find(function);
+        if (it_sw != device.switches_.end() && data_len >= 1) {
+          it_sw->second->publish_state(data[0] == 1);
+        }
+        break;
+      }
+      case FUNC_SENSITIVITY:
+      case FUNC_NEAR_ZONE_SHIELDING: {
+        auto it_sel = device.selects_.find(function);
+        if (it_sel != device.selects_.end() && data_len >= 1) {
+          if (data[0] < it_sel->second->size()) {
+            it_sel->second->publish_state(it_sel->second->at(data[0]).value());
+          }
+        }
+        break;
+      }
     }
   }
 }
 
-// =================== Command Sending ===================
-void MerrytekRadar::send_command(uint8_t function, const std::vector<uint8_t> &data) {
-  uint8_t payload_len = 5 + data.size(); // 5 bytes for HEAD, IDx2, LEN, FUNC
+void MerrytekRadar::send_command_to_device(uint16_t address, uint8_t function_code, const std::vector<uint8_t> &data) {
+  uint8_t payload_len = 5 + data.size();
   std::vector<uint8_t> frame;
   frame.reserve(payload_len + 1);
+
   frame.push_back(FRAME_HEADER);
-  frame.push_back((this->device_id_ >> 8) & 0xFF);
-  frame.push_back(this->device_id_ & 0xFF);
+  frame.push_back((address >> 8) & 0xFF);
+  frame.push_back(address & 0xFF);
   frame.push_back(payload_len);
-  frame.push_back(function);
+  frame.push_back(function_code);
   frame.insert(frame.end(), data.begin(), data.end());
 
-  frame.push_back(calculate_crc(frame.data(), frame.size()));
+  frame.push_back(this->calculate_crc(frame.data(), frame.size()));
+
   this->write_array(frame);
   this->flush();
 }
@@ -168,59 +255,78 @@ uint8_t MerrytekRadar::calculate_crc(const uint8_t *data, uint8_t len) {
   return std::accumulate(data, data + len, (uint8_t)0);
 }
 
-// =================== Controllable Entity Logic ===================
-void MerrytekRadar::register_configurable_number(MerrytekNumber *num, uint8_t fc) { this->numbers_[fc] = num; num->set_parent(this); num->set_function_code(fc); }
-void MerrytekRadar::register_configurable_switch(MerrytekSwitch *sw, uint8_t fc) { this->switches_[fc] = sw; sw->set_parent(this); sw->set_function_code(fc); }
-void MerrytekRadar::register_configurable_select(MerrytekSelect *sel, uint8_t fc) { this->selects_[fc] = sel; sel->set_parent(this); sel->set_function_code(fc); }
-void MerrytekRadar::register_configurable_button(MerrytekButton *btn, uint8_t fc, const std::vector<uint8_t>& data) { this->buttons_[fc] = btn; btn->set_parent(this); btn->set_function_code(fc); btn->set_data(data); }
+void MerrytekRadar::register_presence_sensor(uint16_t address, binary_sensor::BinarySensor *sensor) {
+  auto it = this->devices_.find(address);
+  if (it != this->devices_.end()) {
+    it->second.presence_sensor_ = sensor;
+  }
+}
+
+void MerrytekRadar::register_configurable_number(uint16_t address, uint8_t function_code, number::Number *num) {
+  auto it = this->devices_.find(address);
+  if (it != this->devices_.end()) {
+    it->second.numbers_[function_code] = num;
+    static_cast<MerrytekNumber *>(num)->set_parent_and_address(this, address);
+  }
+}
+
+void MerrytekRadar::register_configurable_switch(uint16_t address, uint8_t function_code, switch_::Switch *sw) {
+  auto it = this->devices_.find(address);
+  if (it != this->devices_.end()) {
+    it->second.switches_[function_code] = sw;
+    static_cast<MerrytekSwitch *>(sw)->set_parent_and_address(this, address);
+  }
+}
+
+void MerrytekRadar::register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel) {
+  auto it = this->devices_.find(address);
+  if (it != this->devices_.end()) {
+    it->second.selects_[function_code] = sel;
+    static_cast<MerrytekSelect *>(sel)->set_parent_and_address(this, address);
+  }
+}
+
+void MerrytekRadar::register_configurable_button(uint16_t address, uint8_t function_code, button::Button *btn) {
+  auto it = this->devices_.find(address);
+  if (it != this->devices_.end()) {
+    it->second.buttons_[function_code] = btn;
+    static_cast<MerrytekButton *>(btn)->set_parent_and_address(this, address);
+  }
+}
+
+void MerrytekRadar::register_configurable_sensor(uint16_t address, uint8_t function_code, sensor::Sensor *sensor) {
+  auto it = this->devices_.find(address);
+  if (it != this->devices_.end()) {
+    it->second.sensors_[function_code] = sensor;
+  }
+}
 
 void MerrytekNumber::control(float value) {
   this->publish_state(value);
   uint32_t int_val = static_cast<uint32_t>(value);
   std::vector<uint8_t> data;
-
-  if (int_val > 0xFFFFFF) data.push_back((int_val >> 24) & 0xFF);
-  if (int_val > 0xFFFF) data.push_back((int_val >> 16) & 0xFF);
-  if (int_val > 0xFF) data.push_back((int_val >> 8) & 0xFF);
+  if (int_val > 0xFF)
+    data.push_back((int_val >> 8) & 0xFF);
   data.push_back(int_val & 0xFF);
-
-  this->parent_->send_command(this->function_code_, data);
+  this->parent_->send_command_to_device(this->address_, this->function_code_, data);
 }
 
 void MerrytekSwitch::write_state(bool state) {
   this->publish_state(state);
-  this->parent_->send_command(this->function_code_, {static_cast<uint8_t>(state)});
+  this->parent_->send_command_to_device(this->address_, this->function_code_, {static_cast<uint8_t>(state)});
 }
 
 void MerrytekSelect::control(const std::string &value) {
-    this->publish_state(value);
-    uint8_t value_to_send = 0;
-
-    if (this->function_code_ == FUNC_DETECTION_AREA) {
-        static const std::map<std::string, uint8_t> MAPPING = {
-            {"0m", 0x00}, {"0.5m", 0x01}, {"1m", 0x03}, {"1.5m", 0x07},
-            {"2m", 0x0F}, {"2.5m", 0x1F}, {"3m", 0x3F}, {"3.5m", 0x7F}, {"4m", 0xFF}
-        };
-        auto it = MAPPING.find(value);
-        if (it != MAPPING.end()) {
-            value_to_send = it->second;
-        } else {
-            ESP_LOGW(TAG, "Invalid option '%s' for Detection Area", value.c_str());
-            return;
-        }
-    } else {
-        auto index = this->index_of(value);
-        if (index.has_value()) {
-            value_to_send = *index;
-        } else {
-            return;
-        }
-    }
-
-    this->parent_->send_command(this->function_code_, {value_to_send});
+  this->publish_state(value);
+  auto index = this->index_of(value);
+  if (index.has_value()) {
+    this->parent_->send_command_to_device(this->address_, this->function_code_, {static_cast<uint8_t>(*index)});
+  }
 }
 
-void MerrytekButton::press_action() { this->parent_->send_command(this->function_code_, this->data_); }
+void MerrytekButton::press_action() {
+  this->parent_->send_command_to_device(this->address_, this->function_code_, this->data_);
+}
 
 }  // namespace merrytek_radar
 }  // namespace esphome
