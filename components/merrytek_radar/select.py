@@ -18,7 +18,7 @@ PLATFORM_SCHEMA = select.SELECT_SCHEMA.extend({
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*SELECTS, lower=True),
     cv.GenerateID(CONF_ID): cv.declare_id(MerrytekSelect),
-})
+}).extend(cv.PLATFORM_SCHEMA)
 
 # Generate C++ code
 async def to_code(config):
@@ -30,3 +30,4 @@ async def to_code(config):
     await select.register_select(var, config)
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var))
+
