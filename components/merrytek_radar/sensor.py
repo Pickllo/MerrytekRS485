@@ -5,7 +5,6 @@ from esphome.const import (
     CONF_ID,
     CONF_TYPE,
     CONF_ADDRESS,
-    CONF_PARENT_ID,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_ICON,
     CONF_STATE_CLASS,
@@ -19,6 +18,7 @@ from . import merrytek_radar_ns, MerrytekRadar
 CONF_LIGHT_LEVEL = "light_level"
 CONF_DIFFERENCE_VALUE = "difference_value"
 CONF_FIRMWARE_VERSION = "firmware_version"
+CONF_MERRYTEK_RADAR_ID = "merrytek_radar_id"
 
 SENSORS = {
     CONF_LIGHT_LEVEL: 0x09,
@@ -27,13 +27,13 @@ SENSORS = {
 }
 
 PLATFORM_SCHEMA = sensor.SENSOR_SCHEMA.extend({
-    cv.GenerateID(CONF_PARENT_ID): cv.use_id(MerrytekRadar),
+    cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*SENSORS, lower=True),
 }).extend(cv.PLATFORM_SCHEMA)
 
 async def to_code(config):
-    parent = await cg.get_variable(config[CONF_PARENT_ID])
+    parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
     var = await sensor.new_sensor(config)
     sensor_type = config[CONF_TYPE]
     function_code = SENSORS[sensor_type]
@@ -46,5 +46,6 @@ async def to_code(config):
         if CONF_ICON not in config:
             cg.add(var.set_icon(ICON_CHIP))
     cg.add(parent.register_configurable_sensor(config[CONF_ADDRESS], function_code, var))
+
 
 
