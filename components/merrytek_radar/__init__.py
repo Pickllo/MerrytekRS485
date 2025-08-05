@@ -9,6 +9,11 @@ merrytek_radar_ns = cg.esphome_ns.namespace("merrytek_radar")
 MerrytekRadar = merrytek_radar_ns.class_(
     "MerrytekRadar", cg.PollingComponent, uart.UARTDevice
 )
+MerrytekRadar = merrytek_radar_ns.class_( "MerrytekRadar", cg.PollingComponent, uart.UARTDevice)
+MerrytekSwitch = merrytek_radar_ns.class_("MerrytekSwitch", switch_.Switch, cg.Component)
+MerrytekNumber = merrytek_radar_ns.class_("MerrytekNumber", number.Number, cg.Component)
+MerrytekSelect = merrytek_radar_ns.class_("MerrytekSelect", select.Select, cg.Component)
+MerrytekButton = merrytek_radar_ns.class_("MerrytekButton", button.Button, cg.Component)
 
 MODELS = ["msa237d", "msa236d"]
 
