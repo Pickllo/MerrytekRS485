@@ -1,16 +1,13 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import uart
+from esphome.components import uart, button, number, select, switch
 from esphome.const import CONF_ID, CONF_ADDRESS, CONF_MODEL, CONF_NAME
 
 # Declare the component's namespace
 CODEOWNERS = ["@Pickllo"]
 merrytek_radar_ns = cg.esphome_ns.namespace("merrytek_radar")
-MerrytekRadar = merrytek_radar_ns.class_(
-    "MerrytekRadar", cg.PollingComponent, uart.UARTDevice
-)
 MerrytekRadar = merrytek_radar_ns.class_( "MerrytekRadar", cg.PollingComponent, uart.UARTDevice)
-MerrytekSwitch = merrytek_radar_ns.class_("MerrytekSwitch", switch_.Switch, cg.Component)
+MerrytekSwitch = merrytek_radar_ns.class_("MerrytekSwitch", switch.Switch, cg.Component)
 MerrytekNumber = merrytek_radar_ns.class_("MerrytekNumber", number.Number, cg.Component)
 MerrytekSelect = merrytek_radar_ns.class_("MerrytekSelect", select.Select, cg.Component)
 MerrytekButton = merrytek_radar_ns.class_("MerrytekButton", button.Button, cg.Component)
