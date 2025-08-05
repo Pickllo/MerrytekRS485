@@ -5,7 +5,6 @@ from esphome.const import (
     CONF_ID,
     CONF_TYPE,
     CONF_ADDRESS,
-    CONF_PARENT_ID,
 )
 
 # Import our custom C++ classes from __init__.py
@@ -17,6 +16,7 @@ CONF_REPORT_QUERY_MODE = "report_query_mode"
 CONF_PRESENCE_DETECTION_ENABLE = "presence_detection_enable"
 CONF_SINGLE_PERSON_MODE = "single_person_mode"
 CONF_LIGHT_SENSING_MODE = "light_sensing_mode"
+CONF_MERRYTEK_RADAR_ID = "merrytek_radar_id"
 
 SWITCHS = {
     CONF_LED_INDICATOR: 0x08,
@@ -28,7 +28,7 @@ SWITCHS = {
 
 # Define the configuration schema for switch entities, updated for the new architecture
 PLATFORM_SCHEMA = switch.SWITCH_SCHEMA.extend({
-    cv.GenerateID(CONF_PARENT_ID): cv.use_id(MerrytekRadar),
+    cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*SWITCHS, lower=True),
     cv.GenerateID(CONF_ID): cv.declare_id(MerrytekSwitch),
@@ -36,13 +36,14 @@ PLATFORM_SCHEMA = switch.SWITCH_SCHEMA.extend({
 
 # Generate C++ code
 async def to_code(config):
-    parent = await cg.get_variable(config[CONF_PARENT_ID])
+    parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
     var = cg.new_Pvariable(config[CONF_ID])
     await switch.register_switch(var, config)
     switch_type = config[CONF_TYPE]
     function_code = SWITCHS[switch_type]
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_switch(config[CONF_ADDRESS], function_code, var))
+
 
 
 
