@@ -40,24 +40,9 @@ async def to_code(config):
         max_value=config[CONF_MAX_VALUE],
         step=config[CONF_STEP],
     )
-    await number.register_component(var, config)
+    await cg.register_component(var, config)
 
     number_type = config[CONF_TYPE]
     function_code = NUMBERS[number_type]
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_number(config[CONF_ADDRESS], function_code, var))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
