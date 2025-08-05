@@ -27,7 +27,7 @@ SWITCHS = {
 }
 
 # Define the configuration schema for switch entities, updated for the new architecture
-PLATFORM_SCHEMA = switch.SWITCH_SCHEMA.extend({
+CONFIG_SCHEMA = switch.SWITCH_SCHEMA.extend({
     cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*SWITCHS, lower=True),
@@ -42,6 +42,7 @@ async def to_code(config):
     function_code = SWITCHS[switch_type]
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_switch(config[CONF_ADDRESS], function_code, var))
+
 
 
 
