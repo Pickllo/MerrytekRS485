@@ -32,8 +32,7 @@ PLATFORM_SCHEMA = switch.SWITCH_SCHEMA.extend({
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*SWITCHS, lower=True),
     cv.GenerateID(CONF_ID): cv.declare_id(MerrytekSwitch),
-}).extend(cv.PLATFORM_SCHEMA)
-
+})
 # Generate C++ code
 async def to_code(config):
     parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
@@ -43,6 +42,7 @@ async def to_code(config):
     function_code = SWITCHS[switch_type]
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_switch(config[CONF_ADDRESS], function_code, var))
+
 
 
 
