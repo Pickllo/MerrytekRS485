@@ -31,10 +31,9 @@ async def to_code(config):
 
     button_type = config[CONF_TYPE]
     function_code, data = BUTTONS[button_type]
-    
-    cg.add(var.set_data(cg.std_vector(data, type=cg.uint8)))
-    
-    cg.add(parent.register_configurable_button(config[CONF_ADDRESS], function_code, var))
+    data_vector = cg.std_vector.template(cg.uint8)(data)
+    cg.add(parent.register_configurable_button(config[CONF_ADDRESS], function_code, var, data_vector))
+
 
 
 
