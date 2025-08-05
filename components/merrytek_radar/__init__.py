@@ -7,7 +7,7 @@ from esphome.const import CONF_ID, CONF_ADDRESS, CONF_MODEL, CONF_NAME
 CODEOWNERS = ["@Pickllo"]
 merrytek_radar_ns = cg.esphome_ns.namespace("merrytek_radar")
 MerrytekRadar = merrytek_radar_ns.class_(
-    "MerrytekRadar", cg.PollingComponent, cg.UARTComponent
+    "MerrytekRadar", cg.PollingComponent, uart.UARTDevice
 )
 
 MODELS = ["msa237d", "msa236d"]
