@@ -18,7 +18,7 @@ BUTTONS = {
     CONF_FLIP_STATUS: (0x23, [0x01]),
 }
 
-PLATFORM_SCHEMA = button.BUTTON_SCHEMA.extend({
+CONFIG_SCHEMA = button.BUTTON_SCHEMA.extend({
     cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*BUTTONS, lower=True),
@@ -35,6 +35,7 @@ async def to_code(config):
     cg.add(var.set_data(cg.std_vector(data, type=cg.uint8)))
     
     cg.add(parent.register_configurable_button(config[CONF_ADDRESS], function_code, var))
+
 
 
 
