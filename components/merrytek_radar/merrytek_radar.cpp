@@ -36,27 +36,20 @@ static const uint8_t FUNC_NEAR_ZONE_SHIELDING = 0x33;
 static const uint8_t FRAME_HEADER = 0x51;
 
 void MerrytekRadar::register_device(const std::string &name, uint16_t address, const std::string &model) {
-  // Log that we're creating a new device.
   ESP_LOGD(TAG, "Registering device: %s (Address: 0x%04X, Model: %s)", name.c_str(), address, model.c_str());
-
-  // Create a new RadarDevice struct
   RadarDevice new_device;
   new_device.name = name;
   new_device.address = address;
   new_device.model = model;
-
-  // Add the newly created device to our map, using its address as the key.
   this->devices_[address] = new_device;
 }
 
 void MerrytekRadar::dump_config() {
   ESP_LOGCONFIG(TAG, "Merrytek Radar Bus Manager:");
-
   if (this->devices_.empty()) {
     ESP_LOGCONFIG(TAG, "  No devices configured.");
     return;
   }
-
   ESP_LOGCONFIG(TAG, "  Configured Devices:");
   for (auto const &[address, device] : this->devices_) {
     ESP_LOGCONFIG(TAG, "    - Device: '%s'", device.name.c_str());
@@ -69,12 +62,8 @@ void MerrytekRadar::setup() {
   ESP_LOGI(TAG, "Initializing Merrytek Radar Bus Manager...");
 }
 
-// update() is called by the PollingComponent on a schedule.
 void MerrytekRadar::update() {
-  // For now, this will be empty.
-  // In the future, we could add logic here to actively send a "read data"
-  // command to all devices on the bus if they are in a polling mode.
-  // ESP_LOGD(TAG, "Polling update triggered.");
+  // Polling logic can be added here if needed.
 }
 
 void MerrytekRadar::loop() {
@@ -118,7 +107,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   uint16_t frame_id = (frame[1] << 8) | frame[2];
   auto it = this->devices_.find(frame_id);
   if (it == this->devices_.end()) {
-    // We received a valid frame, but it's not for any device we have configured.
     ESP_LOGV(TAG, "Ignoring frame from unconfigured address 0x%04X", frame_id);
     return;
   }
@@ -128,19 +116,18 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   uint8_t data_len = payload_len - 5;
   const uint8_t *data = frame.data() + 5;
 
-  ESP_LOGD(TAG, "Received frame for device '%s' (Address: 0x%04X, Model: %s, Function: 0x%02X)",
-           device.name.c_str(), device.address, device.model.c_str(), function);
+  ESP_LOGD(TAG, "Received frame for device '%s' (Address: 0x%04X, Function: 0x%02X)",
+           device.name.c_str(), device.address, function);
 
   if (device.model == "msa236d") {
     switch (function) {
       case FUNC_WORK_STATE:
         if (data_len >= 1 && device.presence_sensor_ != nullptr) {
-          bool is_present = (data[0] == 0x02);  // 0x02 = Occupancy
+          bool is_present = (data[0] == 0x02);
           device.presence_sensor_->publish_state(is_present);
         }
         break;
-      case FUNC_LIGHT_SENSOR:
-      case FUNC_FIRMWARE_VERSION: {
+      case FUNC_LIGHT_SENSOR: {
         auto it_sens = device.sensors_.find(function);
         if (it_sens != device.sensors_.end() && data_len >= 1) {
           uint32_t value = 0;
@@ -151,14 +138,20 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         }
         break;
       }
+      case FUNC_FIRMWARE_VERSION: {
+        auto it_txt_sens = device.text_sensors_.find(function);
+        if (it_txt_sens != device.text_sensors_.end() && data_len >= 1) {
+          std::string version_string(reinterpret_cast<const char*>(data), data_len);
+          it_txt_sens->second->publish_state(version_string);
+        }
+        break;
+      }
       case FUNC_DETECTION_AREA:
       case FUNC_HOLD_TIME: {
         auto it_num = device.numbers_.find(function);
         if (it_num != device.numbers_.end() && data_len >= 1) {
           uint32_t value = 0;
-          for (int i = 0; i < data_len; ++i) {
-            value = (value << 8) | data[i];
-          }
+          for (int i = 0; i < data_len; ++i) { value = (value << 8) | data[i]; }
           it_num->second->publish_state(value);
         }
         break;
@@ -176,24 +169,25 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   } else if (device.model == "msa237d") {
     switch (function) {
       case FUNC_WORK_STATE:
-        if (data_len >= 1) {
-          bool is_present = (data[0] == 0x02);
-          if (device.presence_sensor_ != nullptr) {
-            device.presence_sensor_->publish_state(is_present);
-          }
+        if (data_len >= 1 && device.presence_sensor_ != nullptr) {
+          device.presence_sensor_->publish_state(data[0] == 0x02);
         }
         break;
       case FUNC_LIGHT_SENSOR:
-      case FUNC_LUX_DIFFERENCE_THRESHOLD:
-      case FUNC_FIRMWARE_VERSION: {
+      case FUNC_LUX_DIFFERENCE_THRESHOLD: {
         auto it_sens = device.sensors_.find(function);
         if (it_sens != device.sensors_.end() && data_len >= 1) {
-          // Logic to parse value (can be reused from your number parser)
           uint32_t value = 0;
-          for (int i = 0; i < data_len; ++i) {
-            value = (value << 8) | data[i];
-          }
+          for (int i = 0; i < data_len; ++i) { value = (value << 8) | data[i]; }
           it_sens->second->publish_state(value);
+        }
+        break;
+      }
+      case FUNC_FIRMWARE_VERSION: {
+        auto it_txt_sens = device.text_sensors_.find(function);
+        if (it_txt_sens != device.text_sensors_.end() && data_len >= 1) {
+          std::string version_string(reinterpret_cast<const char*>(data), data_len);
+          it_txt_sens->second->publish_state(version_string);
         }
         break;
       }
@@ -202,9 +196,7 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         auto it_num = device.numbers_.find(function);
         if (it_num != device.numbers_.end() && data_len >= 1) {
           uint32_t value = 0;
-          for (int i = 0; i < data_len; ++i) {
-            value = (value << 8) | data[i];
-          }
+          for (int i = 0; i < data_len; ++i) { value = (value << 8) | data[i]; }
           it_num->second->publish_state(value);
         }
         break;
@@ -292,7 +284,7 @@ void MerrytekRadar::register_configurable_button(uint16_t address, uint8_t funct
     auto *merrytek_btn = static_cast<MerrytekButton *>(btn);
     merrytek_btn->set_parent_and_address(this, address);
     merrytek_btn->set_function_code(function_code);
-    merrytek_btn->set_data(data); // <-- FIX: Set the data payload on the button instance
+    merrytek_btn->set_data(data);
   }
 }
 
@@ -303,10 +295,18 @@ void MerrytekRadar::register_configurable_sensor(uint16_t address, uint8_t funct
   }
 }
 
+void MerrytekRadar::register_configurable_text_sensor(uint16_t address, uint8_t function_code, text_sensor::TextSensor *sensor) {
+  auto it = this->devices_.find(address);
+  if (it != this->devices_.end()) {
+    it->second.text_sensors_[function_code] = sensor;
+  }
+}
+
 void MerrytekNumber::control(float value) {
   this->publish_state(value);
   uint32_t int_val = static_cast<uint32_t>(value);
   std::vector<uint8_t> data;
+  if (int_val > 0xFFFF) data.push_back((int_val >> 16) & 0xFF);
   if (int_val > 0xFF) data.push_back((int_val >> 8) & 0xFF);
   data.push_back(int_val & 0xFF);
   this->parent_->send_command_to_device(this->address_, this->function_code_, data);
@@ -331,5 +331,3 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
-
-
