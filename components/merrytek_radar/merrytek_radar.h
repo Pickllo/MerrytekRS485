@@ -9,6 +9,7 @@
 #include "esphome/components/button/button.h"
 #include <map>
 #include <string>
+#include <vector> 
 
 namespace esphome {
 namespace merrytek_radar {
@@ -41,13 +42,12 @@ class MerrytekRadar : public PollingComponent, public uart::UARTDevice {
   
 // --- Methods for child entities to register themselves ---
   // The address tells the manager WHICH device this entity belongs to.
-  void register_binary_sensor(uint16_t address, const std::string &type, binary_sensor::BinarySensor *sensor)
+  void register_presence_sensor(uint16_t address, binary_sensor::BinarySensor *sensor); 
   void register_configurable_sensor(uint16_t address, uint8_t function_code, sensor::Sensor *sensor);
   void register_configurable_number(uint16_t address, uint8_t function_code, number::Number *num);
   void register_configurable_switch(uint16_t address, uint8_t function_code, switch_::Switch *sw);
   void register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel);
-  void register_configurable_button(uint16_t address, uint8_t function_code, button::Button *btn);
-
+  void register_configurable_button(uint16_t address, uint8_t function_code, button::Button *btn, const std::vector<uint8_t> &data);
   // --- Public method for child entities to send commands ---
   // The child entity must provide its address so the manager knows where to send the command.
   void send_command_to_device(uint16_t address, uint8_t function_code, const std::vector<uint8_t> &data = {});
@@ -63,7 +63,7 @@ class MerrytekRadar : public PollingComponent, public uart::UARTDevice {
   std::map<uint16_t, RadarDevice> devices_;
   // The buffer for incoming UART data.
   std::vector<uint8_t> rx_buffer_;
-}
+}; 
 // ===================================================================
 // The custom entity classes now need to know their own address.
 // ===================================================================
@@ -114,3 +114,4 @@ class MerrytekButton : public button::Button, public Component {
 }; 
 } // namespace merrytek_radar
 }// namespace esphome
+
