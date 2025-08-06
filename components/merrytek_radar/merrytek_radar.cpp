@@ -163,14 +163,33 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
           } else {
               target_percentage = 100;
           }
-          std::string target_string = std::to_string(target_percentage) + "%";
-          auto options = it_sel->second->get_options();
-          if (std::find(options.begin(), options.end(), target_string) != options.end()) {
-              it_sel->second->publish_state(target_string);
-          } else {
-              ESP_LOGW(TAG, "Received value %d for '%s', mapped to '%s', but that option does not exist.",
-                       received_value, it_sel->second->get_name().c_str(), target_string.c_str());
+          bool found = false;
+          for (size_t i = 0; i < it_sel->second->size(); i++) {
+              optional<std::string> option_str_opt = it_sel->second->at(i);
+              if (option_str_opt.has_value()) {
+                  std::string option_str = option_str_opt.value();
+                  char* end;
+                  long option_val = strtol(option_str.c_str(), &end, 10);
+                  if (end != option_str.c_str() && option_val == target_percentage) {
+                      it_sel->second->publish_state(option_str);
+                      found = true;
+                      break;
+                  }
+              }
           }
+          if (!found) {
+              ESP_LOGW(TAG, "Received value %d for '%s', but could not find a matching percentage option.",
+                       received_value, it_sel->second->get_name().c_str());
+          }
+        }
+        break;
+      }
+      case FUNC_HOLD_TIME: {
+        auto it_num = device.numbers_.find(function);
+        if (it_num != device.numbers_.end() && data_len >= 1) {
+          uint32_t value = 0;
+          for (int i = 0; i < data_len; ++i) { value = (value << 8) | data[i]; }
+          it_num->second->publish_state(value);
         }
         break;
       }
@@ -346,10 +365,11 @@ void MerrytekSelect::control(const std::string &value) {
 
   switch (this->behavior_) {
     case SEND_PERCENTAGE_VALUE: {
-      try {
-        uint8_t percentage_val = static_cast<uint8_t>(std::stoi(value));
-        data.push_back(percentage_val);
-      } catch (const std::invalid_argument& e) {
+      char* end;
+      long percentage_val = strtol(value.c_str(), &end, 10);
+      if (end != value.c_str()) { 
+        data.push_back(static_cast<uint8_t>(percentage_val));
+      } else {
         ESP_LOGE(TAG, "Cannot convert select option '%s' to a number.", value.c_str());
       }
       break;
@@ -375,4 +395,5 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
