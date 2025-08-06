@@ -119,7 +119,52 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
 
   ESP_LOGD(TAG, "Received frame for device '%s' (Address: 0x%04X, Function: 0x%02X)",
            device.name.c_str(), device.address, function);
-
+  
+  if (function == FUNC_DETECTION_AREA) {
+    auto it_sel = device.selects_.find(function);
+    if (it_sel != device.selects_.end() && data_len >= 1) {
+      auto *merrytek_sel = static_cast<MerrytekSelect *>(it_sel->second);
+      uint8_t received_value = data[0];
+      if (merrytek_sel->get_behavior() == MerrytekSelect::SEND_PERCENTAGE_VALUE) {
+        uint8_t target_percentage;
+        if (received_value == 0) {
+            target_percentage = 0;
+        } else if (received_value <= 25) {
+            target_percentage = 25;
+        } else if (received_value <= 50) {
+            target_percentage = 50;
+        } else if (received_value <= 75) {
+            target_percentage = 75;
+        } else {
+            target_percentage = 100;
+        }
+        
+        bool found = false;
+        for (size_t i = 0; i < merrytek_sel->size(); i++) {
+            optional<std::string> option_str_opt = merrytek_sel->at(i);
+            if (option_str_opt.has_value()) {
+                std::string option_str = option_str_opt.value();
+                char* end;
+                long option_val = strtol(option_str.c_str(), &end, 10);
+                if (end != option_str.c_str() && option_val == target_percentage) {
+                    merrytek_sel->publish_state(option_str);
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            ESP_LOGW(TAG, "Received value %d for '%s', but could not find a matching percentage option.",
+                      received_value, merrytek_sel->get_name().c_str());
+        }
+      } else {
+        if (received_value < merrytek_sel->size()) {
+          merrytek_sel->publish_state(merrytek_sel->at(received_value).value());
+        }
+      }
+    }
+    return; // Exit after handling this special case
+  }
   if (device.model == "msa236d") {
     switch (function) {
       case FUNC_WORK_STATE:
@@ -144,43 +189,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         if (it_txt_sens != device.text_sensors_.end() && data_len >= 1) {
           std::string version_string(reinterpret_cast<const char*>(data), data_len);
           it_txt_sens->second->publish_state(version_string);
-        }
-        break;
-      }
-      case FUNC_DETECTION_AREA: {
-        auto it_sel = device.selects_.find(function);
-        if (it_sel != device.selects_.end() && data_len >= 1) {
-          uint8_t received_value = data[0];
-          uint8_t target_percentage;
-          if (received_value == 0) {
-              target_percentage = 0;
-          } else if (received_value <= 25) {
-              target_percentage = 25;
-          } else if (received_value <= 50) {
-              target_percentage = 50;
-          } else if (received_value <= 75) {
-              target_percentage = 75;
-          } else {
-              target_percentage = 100;
-          }
-          bool found = false;
-          for (size_t i = 0; i < it_sel->second->size(); i++) {
-              optional<std::string> option_str_opt = it_sel->second->at(i);
-              if (option_str_opt.has_value()) {
-                  std::string option_str = option_str_opt.value();
-                  char* end;
-                  long option_val = strtol(option_str.c_str(), &end, 10);
-                  if (end != option_str.c_str() && option_val == target_percentage) {
-                      it_sel->second->publish_state(option_str);
-                      found = true;
-                      break;
-                  }
-              }
-          }
-          if (!found) {
-              ESP_LOGW(TAG, "Received value %d for '%s', but could not find a matching percentage option.",
-                       received_value, it_sel->second->get_name().c_str());
-          }
         }
         break;
       }
@@ -225,16 +233,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         if (it_txt_sens != device.text_sensors_.end() && data_len >= 1) {
           std::string version_string(reinterpret_cast<const char*>(data), data_len);
           it_txt_sens->second->publish_state(version_string);
-        }
-        break;
-      }
-      case FUNC_DETECTION_AREA:
-      case FUNC_HOLD_TIME: {
-        auto it_num = device.numbers_.find(function);
-        if (it_num != device.numbers_.end() && data_len >= 1) {
-          uint32_t value = 0;
-          for (int i = 0; i < data_len; ++i) { value = (value << 8) | data[i]; }
-          it_num->second->publish_state(value);
         }
         break;
       }
@@ -395,5 +393,6 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
 
