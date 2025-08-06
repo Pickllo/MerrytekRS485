@@ -35,8 +35,9 @@ async def to_code(config):
     function_code, options = SELECTS[select_type]
     await select.register_select(var, config, options=options)
     cg.add(var.set_function_code(function_code))
-    behavior = MerrytekSelect.SEND_INDEX 
+    behavior = merrytek_radar_ns.enum("SelectBehavior").SEND_INDEX
     if select_type == CONF_MOTION_SENSITIVITY:
         behavior = MerrytekSelect.SEND_PERCENTAGE_VALUE
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var, behavior))
+
 
