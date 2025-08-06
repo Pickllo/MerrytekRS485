@@ -27,10 +27,4 @@ async def to_code(config):
     sensor_type = config[CONF_TYPE]
     if sensor_type == CONF_PRESENCE:
         cg.add(var.set_device_class(DEVICE_CLASS_OCCUPANCY))
-    cg.add(parent.register_binary_sensor(config[CONF_ADDRESS], sensor_type, var))
-
-
-
-
-
-
+    cg.add(parent.register_presence_sensor(config[CONF_ADDRESS], var))
