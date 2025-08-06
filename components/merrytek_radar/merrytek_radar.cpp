@@ -285,11 +285,14 @@ void MerrytekRadar::register_configurable_select(uint16_t address, uint8_t funct
   }
 }
 
-void MerrytekRadar::register_configurable_button(uint16_t address, uint8_t function_code, button::Button *btn) {
+void MerrytekRadar::register_configurable_button(uint16_t address, uint8_t function_code, button::Button *btn, const std::vector<uint8_t> &data) {
   auto it = this->devices_.find(address);
   if (it != this->devices_.end()) {
     it->second.buttons_[function_code] = btn;
-    static_cast<MerrytekButton *>(btn)->set_parent_and_address(this, address);
+    auto *merrytek_btn = static_cast<MerrytekButton *>(btn);
+    merrytek_btn->set_parent_and_address(this, address);
+    merrytek_btn->set_function_code(function_code);
+    merrytek_btn->set_data(data); // <-- FIX: Set the data payload on the button instance
   }
 }
 
@@ -304,8 +307,7 @@ void MerrytekNumber::control(float value) {
   this->publish_state(value);
   uint32_t int_val = static_cast<uint32_t>(value);
   std::vector<uint8_t> data;
-  if (int_val > 0xFF)
-    data.push_back((int_val >> 8) & 0xFF);
+  if (int_val > 0xFF) data.push_back((int_val >> 8) & 0xFF);
   data.push_back(int_val & 0xFF);
   this->parent_->send_command_to_device(this->address_, this->function_code_, data);
 }
@@ -329,4 +331,5 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
