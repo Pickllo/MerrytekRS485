@@ -298,16 +298,13 @@ void MerrytekRadar::register_configurable_switch(uint16_t address, uint8_t funct
   }
 }
 
-void MerrytekRadar::register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel) {
+void MerrytekRadar::register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel, MerrytekSelect::SelectBehavior behavior) {
   auto it = this->devices_.find(address);
   if (it != this->devices_.end()) {
     it->second.selects_[function_code] = sel;
     auto *merrytek_sel = static_cast<MerrytekSelect *>(sel);
     merrytek_sel->set_parent_and_address(this, address);
-    if (it->second.model == "msa236d" && function_code == FUNC_DETECTION_AREA) {
-      ESP_LOGD(TAG, "Configuring select '%s' to send percentage values for msa236d.", sel->get_name().c_str());
-      merrytek_sel->set_behavior(MerrytekSelect::SEND_PERCENTAGE_VALUE);
-    }
+    merrytek_sel->set_behavior(behavior);
   }
 }
 
@@ -387,6 +384,7 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
 
 
