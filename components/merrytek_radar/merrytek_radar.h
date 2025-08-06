@@ -108,6 +108,7 @@ class MerrytekSelect : public select::Select, public Component {
   void set_parent_and_address(MerrytekRadar *parent, uint16_t address) { this->parent_ = parent; this->address_ = address; }
   void set_function_code(uint8_t code) { this->function_code_ = code; }
   void set_behavior(SelectBehavior behavior) { this->behavior_ = behavior; }
+  SelectBehavior get_behavior() const { return this->behavior_; }
  protected:
   MerrytekRadar *parent_;
   uint16_t address_;
@@ -129,4 +130,5 @@ class MerrytekButton : public button::Button, public Component {
 };
 } // namespace merrytek_radar
 } // namespace esphome
+
 
