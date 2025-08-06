@@ -100,13 +100,19 @@ class MerrytekSwitch : public switch_::Switch, public Component {
 
 class MerrytekSelect : public select::Select, public Component {
  public:
+  enum SelectBehavior {
+    SEND_INDEX,         
+    SEND_PERCENTAGE_VALUE 
+  };
   void control(const std::string &value) override;
   void set_parent_and_address(MerrytekRadar *parent, uint16_t address) { this->parent_ = parent; this->address_ = address; }
   void set_function_code(uint8_t code) { this->function_code_ = code; }
+  void set_behavior(SelectBehavior behavior) { this->behavior_ = behavior; }
  protected:
   MerrytekRadar *parent_;
   uint16_t address_;
   uint8_t function_code_;
+  SelectBehavior behavior_{SEND_INDEX};
 };
 
 class MerrytekButton : public button::Button, public Component {
@@ -123,3 +129,4 @@ class MerrytekButton : public button::Button, public Component {
 };
 } // namespace merrytek_radar
 } // namespace esphome
+
