@@ -18,7 +18,7 @@ MerrytekSensor = merrytek_radar_ns.class_("MerrytekSensor", sensor.Sensor, cg.Co
 TYPES = ["light_level"]
 
 FUNCTION_CODES = {
-    "light_level": 0x01,
+    "light_level": 0x09,
 }
 
 CONFIG_SCHEMA = sensor.sensor_schema(
@@ -42,4 +42,5 @@ async def to_code(config):
     function_code = FUNCTION_CODES[config[CONF_TYPE]]
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_sensor(config[CONF_ADDRESS], function_code, var))
+
 
