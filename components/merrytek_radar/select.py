@@ -2,6 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import select
 from esphome.const import (CONF_ID, CONF_TYPE,CONF_ADDRESS,CONF_OPTIONS,CONF_MODEL,)
+from esphome.core import CORE
 from . import merrytek_radar_ns, MerrytekRadar, MerrytekSelect
 
 # Define supported select entities and their function codes
@@ -25,35 +26,29 @@ CONFIG_SCHEMA = select.SELECT_SCHEMA.extend({
 
 # Generate C++ code
 async def to_code(config):
-    parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
     var = cg.new_Pvariable(config[CONF_ID])
     select_type = config[CONF_TYPE]
     function_code, options = SELECTS[select_type]
     if options is None:
         address = config[CONF_ADDRESS]
+        parent_id = config[CONF_MERRYTEK_RADAR_ID]
         device_model = ""
-        for device in parent.config["devices"]:
-            if device[CONF_ADDRESS] == address:
-                device_model = device[CONF_MODEL]
-                break      
+        for parent_config in CORE.config["merrytek_radar"]:
+            if parent_config[CONF_ID] == parent_id:
+                for device_config in parent_config["devices"]:
+                    if device_config[CONF_ADDRESS] == address:
+                        device_model = device_config[CONF_MODEL]
+                        break
+                break
         if not device_model:
             raise cv.Invalid(f"Could not find a device with address {address} in the merrytek_radar configuration.")
         if device_model == "msa236d":
             options = ["0%", "25%", "50%", "75%", "100%"]
-        else: 
-            options = ["0m", "0.5m", "1m", "1.5m", "2m", "2.5m", "3m", "3.5m", "4m"]
+        else:  
+            options = ["0m", "0.5m", "1m", "1.5m", "2m", "2.5m", "3m", "3.5m", "4m"]  
     await select.register_select(var, config, options=options)
     await cg.register_component(var, config)
+
+    parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var))
-
-
-
-
-
-
-
-
-
-
-
