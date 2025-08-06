@@ -51,7 +51,6 @@ void MerrytekRadar::register_device(const std::string &name, uint16_t address, c
 
 void MerrytekRadar::dump_config() {
   ESP_LOGCONFIG(TAG, "Merrytek Radar Bus Manager:");
-  ESP_LOGCONFIG(TAG, "  UART Bus: %s", this->get_uart_bus_id().c_str());
 
   if (this->devices_.empty()) {
     ESP_LOGCONFIG(TAG, "  No devices configured.");
@@ -330,3 +329,4 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
