@@ -2,6 +2,7 @@
 #include "esphome/core/log.h"
 #include <numeric>
 #include <map>
+#include <algorithm>
 
 namespace esphome {
 namespace merrytek_radar {
@@ -146,13 +147,30 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         }
         break;
       }
-      case FUNC_DETECTION_AREA:
-      case FUNC_HOLD_TIME: {
-        auto it_num = device.numbers_.find(function);
-        if (it_num != device.numbers_.end() && data_len >= 1) {
-          uint32_t value = 0;
-          for (int i = 0; i < data_len; ++i) { value = (value << 8) | data[i]; }
-          it_num->second->publish_state(value);
+      case FUNC_DETECTION_AREA: {
+        auto it_sel = device.selects_.find(function);
+        if (it_sel != device.selects_.end() && data_len >= 1) {
+          uint8_t received_value = data[0];
+          uint8_t target_percentage;
+          if (received_value == 0) {
+              target_percentage = 0;
+          } else if (received_value <= 25) {
+              target_percentage = 25;
+          } else if (received_value <= 50) {
+              target_percentage = 50;
+          } else if (received_value <= 75) {
+              target_percentage = 75;
+          } else {
+              target_percentage = 100;
+          }
+          std::string target_string = std::to_string(target_percentage) + "%";
+          auto options = it_sel->second->get_options();
+          if (std::find(options.begin(), options.end(), target_string) != options.end()) {
+              it_sel->second->publish_state(target_string);
+          } else {
+              ESP_LOGW(TAG, "Received value %d for '%s', mapped to '%s', but that option does not exist.",
+                       received_value, it_sel->second->get_name().c_str(), target_string.c_str());
+          }
         }
         break;
       }
@@ -273,7 +291,12 @@ void MerrytekRadar::register_configurable_select(uint16_t address, uint8_t funct
   auto it = this->devices_.find(address);
   if (it != this->devices_.end()) {
     it->second.selects_[function_code] = sel;
-    static_cast<MerrytekSelect *>(sel)->set_parent_and_address(this, address);
+    auto *merrytek_sel = static_cast<MerrytekSelect *>(sel);
+    merrytek_sel->set_parent_and_address(this, address);
+    if (it->second.model == "msa236d" && function_code == FUNC_DETECTION_AREA) {
+      ESP_LOGD(TAG, "Configuring select '%s' to send percentage values for msa236d.", sel->get_name().c_str());
+      merrytek_sel->set_behavior(MerrytekSelect::SEND_PERCENTAGE_VALUE);
+    }
   }
 }
 
@@ -319,9 +342,30 @@ void MerrytekSwitch::write_state(bool state) {
 
 void MerrytekSelect::control(const std::string &value) {
   this->publish_state(value);
-  auto index = this->index_of(value);
-  if (index.has_value()) {
-    this->parent_->send_command_to_device(this->address_, this->function_code_, {static_cast<uint8_t>(*index)});
+  std::vector<uint8_t> data;
+
+  switch (this->behavior_) {
+    case SEND_PERCENTAGE_VALUE: {
+      try {
+        uint8_t percentage_val = static_cast<uint8_t>(std::stoi(value));
+        data.push_back(percentage_val);
+      } catch (const std::invalid_argument& e) {
+        ESP_LOGE(TAG, "Cannot convert select option '%s' to a number.", value.c_str());
+      }
+      break;
+    }
+    case SEND_INDEX:
+    default: {
+      auto index = this->index_of(value);
+      if (index.has_value()) {
+        data.push_back(static_cast<uint8_t>(*index));
+      }
+      break;
+    }
+  }
+
+  if (!data.empty()) {
+    this->parent_->send_command_to_device(this->address_, this->function_code_, data);
   }
 }
 
@@ -331,3 +375,4 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
