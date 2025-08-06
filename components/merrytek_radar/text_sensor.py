@@ -6,6 +6,7 @@ from esphome.const import (
     CONF_TYPE,
     CONF_ADDRESS,
     ICON_CHIP,
+    CONF_ICON,
 )
 
 from . import merrytek_radar_ns, MerrytekRadar
@@ -23,7 +24,7 @@ CONFIG_SCHEMA = text_sensor.TEXT_SENSOR_SCHEMA.extend({
     cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*TYPES, lower=True),
-    cv.Optional(ICON): ICON_CHIP,
+    cv.Optional(CONF_ICON, default=ICON_CHIP): cv.icon,
 })
 
 async def to_code(config):
