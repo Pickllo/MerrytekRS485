@@ -15,7 +15,7 @@ MerrytekTextSensor = merrytek_radar_ns.class_("MerrytekTextSensor", text_sensor.
 TYPES = ["firmware_version"]
 
 FUNCTION_CODES = {
-    "firmware_version": 0x02,
+    "firmware_version": 0x17,
 }
 
 CONFIG_SCHEMA = text_sensor.TEXT_SENSOR_SCHEMA.extend({
