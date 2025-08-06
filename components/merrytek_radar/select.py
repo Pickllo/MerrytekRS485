@@ -16,7 +16,7 @@ SELECTS = {
     CONF_SENSITIVITY: (0x06, ["Low", "High", "Medium"]),
     CONF_NEAR_ZONE_SHIELDING: (0x33, ["0m", "0.6m", "1.2m", "1.6m"]),
     CONF_DETECTION_AREA: (0x05, ["0m", "0.5m", "1m", "1.5m", "2m", "2.5m", "3m", "3.5m", "4m"]),
-    CONF_MOTION_SENSITIVITY: (0x05, ["0%", "25%", "50%", "75%", "100%"],
+    CONF_MOTION_SENSITIVITY: (0x05, ["0%", "25%", "50%", "75%", "100%"]),
 }
 
 CONFIG_SCHEMA = select.SELECT_SCHEMA.extend({
@@ -39,3 +39,4 @@ async def to_code(config):
     if select_type == CONF_MOTION_SENSITIVITY:
         behavior = MerrytekSelect.SEND_PERCENTAGE_VALUE
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var, behavior))
+
