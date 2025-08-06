@@ -1,3 +1,4 @@
+import copy
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor
@@ -25,7 +26,7 @@ SENSORS = {
     CONF_DIFFERENCE_VALUE: 0x0A,
     CONF_FIRMWARE_VERSION: 0x17,
 }
-CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.copy()
+CONFIG_SCHEMA = copy.deepcopy(sensor.SENSOR_SCHEMA)
 CONFIG_SCHEMA.pop(CONF_STATE_CLASS, None)
 CONFIG_SCHEMA.update({
     cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
@@ -48,6 +49,7 @@ async def to_code(config):
         if CONF_ICON not in config:
             cg.add(var.set_icon(ICON_CHIP))
     cg.add(parent.register_configurable_sensor(config[CONF_ADDRESS], function_code, var))
+
 
 
 
