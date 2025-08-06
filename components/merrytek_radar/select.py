@@ -1,7 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import select
-from esphome.const import (CONF_ID, CONF_TYPE,CONF_ADDRESS,CONF_OPTIONS,)
+from esphome.const import (CONF_ID, CONF_TYPE,CONF_ADDRESS,CONF_OPTIONS,CONF_MODEL,)
 from . import merrytek_radar_ns, MerrytekRadar, MerrytekSelect
 
 # Define supported select entities and their function codes
@@ -46,6 +46,7 @@ async def to_code(config):
     await cg.register_component(var, config)
     cg.add(var.set_function_code(function_code))
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var))
+
 
 
 
