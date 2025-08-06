@@ -11,7 +11,6 @@ from esphome.const import (
     UNIT_LUX,
     ICON_CHIP,
     STATE_CLASS_MEASUREMENT,
-    STATE_CLASSES,
 )
 
 from . import merrytek_radar_ns, MerrytekRadar
@@ -32,7 +31,7 @@ CONFIG_SCHEMA.update({
     cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*SENSORS, lower=True),
-    cv.Optional(CONF_STATE_CLASS): cv.enum(STATE_CLASSES, upper=True),
+    cv.Optional(CONF_STATE_CLASS): cv.enum(sensor.STATE_CLASSES, upper=True),
 })
 
 async def to_code(config):
@@ -49,6 +48,7 @@ async def to_code(config):
         if CONF_ICON not in config:
             cg.add(var.set_icon(ICON_CHIP))
     cg.add(parent.register_configurable_sensor(config[CONF_ADDRESS], function_code, var))
+
 
 
 
