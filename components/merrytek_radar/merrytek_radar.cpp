@@ -298,13 +298,13 @@ void MerrytekRadar::register_configurable_switch(uint16_t address, uint8_t funct
   }
 }
 
-void MerrytekRadar::register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel, MerrytekSelect::SelectBehavior behavior) {
+void MerrytekRadar::register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel, SelectBehavior behavior) {
   auto it = this->devices_.find(address);
   if (it != this->devices_.end()) {
     it->second.selects_[function_code] = sel;
     auto *merrytek_sel = static_cast<MerrytekSelect *>(sel);
     merrytek_sel->set_parent_and_address(this, address);
-    merrytek_sel->set_behavior(behavior);
+    merrytek_sel->set_behavior(behavior); 
   }
 }
 
@@ -384,6 +384,7 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
 
 
