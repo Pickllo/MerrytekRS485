@@ -41,6 +41,5 @@ async def to_code(config):
     cg.add(var.set_address(config[CONF_ADDRESS]))
     function_code = FUNCTION_CODES[config[CONF_TYPE]]
     cg.add(var.set_function_code(function_code))
-
-    # Register this sensor with the parent hub
     cg.add(parent.register_configurable_sensor(config[CONF_ADDRESS], function_code, var))
+
