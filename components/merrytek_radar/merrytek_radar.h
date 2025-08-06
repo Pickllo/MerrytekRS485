@@ -14,6 +14,10 @@
 
 namespace esphome {
 namespace merrytek_radar {
+enum SelectBehavior {
+  SEND_INDEX,
+  SEND_PERCENTAGE_VALUE
+};
 class MerrytekRadar; 
 struct RadarDevice {
   std::string name;
@@ -41,7 +45,7 @@ class MerrytekRadar : public PollingComponent, public uart::UARTDevice {
   void register_configurable_text_sensor(uint16_t address, uint8_t function_code, text_sensor::TextSensor *sensor);
   void register_configurable_number(uint16_t address, uint8_t function_code, number::Number *num);
   void register_configurable_switch(uint16_t address, uint8_t function_code, switch_::Switch *sw);
-  void register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel, class MerrytekSelect::SelectBehavior behavior);
+  void register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel, SelectBehavior behavior);
   void register_configurable_button(uint16_t address, uint8_t function_code, button::Button *btn, const std::vector<uint8_t> &data);
   
   void send_command_to_device(uint16_t address, uint8_t function_code, const std::vector<uint8_t> &data = {});
@@ -99,11 +103,6 @@ class MerrytekSwitch : public switch_::Switch, public Component {
 };
 class MerrytekSelect : public select::Select, public Component {
  public:
-  enum SelectBehavior {
-    SEND_INDEX,
-    SEND_PERCENTAGE_VALUE
-  };
-
   void control(const std::string &value) override;
   void set_parent_and_address(MerrytekRadar *parent, uint16_t address) { this->parent_ = parent; this->address_ = address; }
   void set_function_code(uint8_t code) { this->function_code_ = code; }
@@ -130,6 +129,7 @@ class MerrytekButton : public button::Button, public Component {
 };
 } // namespace merrytek_radar
 } // namespace esphome
+
 
 
 
