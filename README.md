@@ -53,22 +53,22 @@ Configuration is split into two parts: the main hub component that manages the b
 
 First, define the UART bus and the merrytek_radar component. This component acts as a hub for all your devices.
 Define the UART bus for RS485 communication
-YAML
-
+```yaml
 uart:
   - id: uart_485
     tx_pin: 18
     rx_pin: 8
     baud_rate: 9600
+```
 
 Add the main component configuration
-YAML
+```YAML
 merrytek_radar:
   uart_id: uart_485
   id: merrytek_bus_manager
-  
+``` 
 List all devices on the bus
-YAML
+```YAML
   devices:
     - name: "Presence"
       address: 0x0000
@@ -76,17 +76,15 @@ YAML
     - name: "Motion"
       address: 0xFFFF
       model: "msa236d"
-
+```
 2. Entity Configuration
 
 You can then add entities for each device. All entities require a merrytek_radar_id (pointing to the hub) and the device address.
 
 Binary Sensor
-
 type: presence - The main motion/occupancy sensor.
 
-YAML
-
+```YAML
 binary_sensor:
   - platform: merrytek_radar
     merrytek_radar_id: merrytek_bus_manager
@@ -94,17 +92,14 @@ binary_sensor:
     address: 0x0000
     type: presence
     device_class: occupancy
-
+```
 
 
 Text Sensor
-
 type: firmware_version - Displays the firmware version. Requires the query_firmware_version button to be pressed to update.
 type: learning_status - Shows the status of the self-learning feature. (For msa237d)
 
-YAML
-
-
+```YAML
 text_sensor:
   - platform: merrytek_radar
     merrytek_radar_id: merrytek_bus_manager
@@ -117,59 +112,65 @@ text_sensor:
     address: 0x0000
     type: learning_status
     icon: mdi:brain
-
+```
 
 
 Button
-
 type: factory_reset - Resets the device to factory defaults.
 type: flip_status - Inverts the presence detection logic.
 type: query_firmware_version - Required to update the firmware_version text sensor.
 type: environmental_self_learning - Starts the 6-minute self-learning process. (For msa237d)
 type: ignore_distractions - Triggers the "Ignore distractions" function. (For msa237d)
 
-YAML
-
-
+```YAML
 button:
   - platform: merrytek_radar
     merrytek_radar_id: merrytek_bus_manager
     name: "Presence Firmware Query"
     address: 0x0000
     type: query_firmware_version
-
+```
 
 
 Select
-
 type: sensitivity
 type: near_zone_shielding
 type: presence_detection_area - For sensors that use distance in meters (e.g., msa237d).
 type: motion_detection_area - For sensors that use percentage (e.g., msa236d).
 
-YAML
-
-
+```YAML
 select:
   - platform: merrytek_radar
     merrytek_radar_id: merrytek_bus_manager
     name: "Presence Detection Area"
     address: 0x0000
     type: presence_detection_area
-
-
-
+```
 Switch
-
 type: led_indicator - Toggles the onboard LED.
 type: presence_detection_enable - Enables or disables the sensor.
 type: report_query_mode - Switches between active reporting and query-only mode.
-
+```yaml
+select:
+ - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion LED Indicator"
+    address: 0xFFFF
+    type: led_indicator
+```
 Number
-
 type: hold_time - Configures the hold time in seconds.
-
-
-
+```yaml
+number:
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion Hold Time"
+    address: 0xFFFF
+    type: hold_time
+    min_value: 3
+    max_value: 7200
+    step: 1
+    unit_of_measurement: "s"
+```
 
 
