@@ -13,7 +13,9 @@ from . import merrytek_radar_ns, MerrytekRadar
 
 MerrytekTextSensor = merrytek_radar_ns.class_("MerrytekTextSensor", text_sensor.TextSensor, cg.Component)
 
-TYPES = ["firmware_version"]
+CONF_LEARNING_STATUS = "learning_status"
+
+TYPES = ["firmware_version", CONF_LEARNING_STATUS]
 
 FUNCTION_CODES = {
     "firmware_version": 0x17,
@@ -33,6 +35,10 @@ async def to_code(config):
     await text_sensor.register_text_sensor(var, config)
     cg.add(var.set_parent(parent))
     cg.add(var.set_address(config[CONF_ADDRESS]))
-    function_code = FUNCTION_CODES[config[CONF_TYPE]]
-    cg.add(var.set_function_code(function_code))
-    cg.add(parent.register_configurable_text_sensor(config[CONF_ADDRESS], function_code, var))
+
+    if config[CONF_TYPE] == CONF_LEARNING_STATUS:
+        cg.add(parent.register_learning_status_text_sensor(config[CONF_ADDRESS], var))
+    else:
+        function_code = FUNCTION_CODES[config[CONF_TYPE]]
+        cg.add(var.set_function_code(function_code))
+        cg.add(parent.register_configurable_text_sensor(config[CONF_ADDRESS], function_code, var))
