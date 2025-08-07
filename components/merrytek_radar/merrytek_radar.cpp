@@ -120,10 +120,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
       ESP_LOGD(TAG, "Ignoring frame from 0x%04X while waiting for 0x%04X", frame_id, this->waiting_for_address_);
       return;
     }
-        if (function == this->last_sent_function_code_ ||
-        (this->last_sent_function_code_ == FUNC_READ_ALL && function == FUNC_FIRMWARE_VERSION)) {
-      this->state_ = State::IDLE; 
-    }
   }
   auto it = this->devices_.find(frame_id);
   if (it == this->devices_.end()) {
