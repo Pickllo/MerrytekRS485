@@ -3,7 +3,7 @@ import esphome.config_validation as cv
 from esphome.components import select
 from esphome.const import (CONF_ID, CONF_TYPE,CONF_ADDRESS,)
 from esphome.core import CORE
-from . import merrytek_radar_ns, MerrytekRadar, MerrytekSelect
+from . import merrytek_radar_ns, MerrytekRadar, MerrytekSelect, SelectBehavior
 
 # Define supported select entities and their function codes
 CONF_NEAR_ZONE_SHIELDING = "near_zone_shielding"
@@ -38,3 +38,4 @@ async def to_code(config):
     if select_type == CONF_MOTION_DETECTION_AREA:
         behavior = SelectBehavior.SEND_PERCENTAGE_VALUE
     cg.add(parent.register_configurable_select(config[CONF_ADDRESS], function_code, var, behavior))
+
