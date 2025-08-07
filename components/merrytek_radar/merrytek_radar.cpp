@@ -230,6 +230,29 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         }
         break;
       }
+      case FUNC_ENVIRONMENTAL_SELF_LEARNING: {
+        if (device.learning_status_text_sensor_ != nullptr && data_len >= 1) {
+          uint8_t status_value = data[0];
+          switch (status_value) {
+            case 0x01:
+              device.learning_status_text_sensor_->publish_state("Learning started");
+              break;
+            case 0x02:
+              device.learning_status_text_sensor_->publish_state("Learning finished");
+              break;
+            case 0x03:
+              device.learning_status_text_sensor_->publish_state("Learning canceled");
+              break;
+            case 0x04:
+              device.learning_status_text_sensor_->publish_state("Learning failed");
+              break;
+            default:
+              ESP_LOGW(TAG, "Received unknown self-learning status: 0x%02X", status_value);
+              break;
+          }
+        }
+        break;
+      }
       case FUNC_DETECTION_AREA: {
         auto it_sel = device.selects_.find(function);
         if (it_sel != device.selects_.end() && data_len >= 1) {
@@ -352,6 +375,13 @@ void MerrytekRadar::register_configurable_text_sensor(uint16_t address, uint8_t 
   }
 }
 
+void MerrytekRadar::register_learning_status_text_sensor(uint16_t address, text_sensor::TextSensor *sensor) {
+  auto it = this->devices_.find(address);
+  if (it != this->devices_.end()) {
+    it->second.learning_status_text_sensor_ = sensor;
+  }
+}
+
 void MerrytekNumber::control(float value) {
   this->publish_state(value);
   uint32_t int_val = static_cast<uint32_t>(value);
@@ -403,5 +433,6 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
 
