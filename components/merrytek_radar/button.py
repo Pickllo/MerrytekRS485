@@ -8,6 +8,7 @@ from . import merrytek_radar_ns, MerrytekRadar, MerrytekButton
 CONF_FACTORY_RESET = "factory_reset"
 CONF_ENVIRONMENTAL_SELF_LEARNING = "environmental_self_learning"
 CONF_IGNORE_DISTRACTIONS = "ignore_distractions"
+CONF_QUERY_FIRMWARE_VERSION = "query_firmware_version"
 CONF_ID_EDIT_ENABLE = "id_edit_enable"
 CONF_FLIP_STATUS = "flip_status"
 CONF_MERRYTEK_RADAR_ID = "merrytek_radar_id"
@@ -16,6 +17,7 @@ BUTTONS = {
     CONF_FACTORY_RESET: (0x30, [0x01]),
     CONF_ENVIRONMENTAL_SELF_LEARNING: (0x29, [0x01]),
     CONF_IGNORE_DISTRACTIONS: (0x29, [0x05]),
+    CONF_QUERY_FIRMWARE_VERSION: (0x17, []),
     CONF_ID_EDIT_ENABLE: (0x21, [0x01]),
     CONF_FLIP_STATUS: (0x23, [0x01]),
 }
@@ -35,6 +37,7 @@ async def to_code(config):
     function_code, data = BUTTONS[button_type]
     data_vector = cg.std_vector.template(cg.uint8)(data)
     cg.add(parent.register_configurable_button(config[CONF_ADDRESS], function_code, var, data_vector))
+
 
 
 
