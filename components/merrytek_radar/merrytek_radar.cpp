@@ -130,7 +130,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
     return;
   }
   RadarDevice &device = it->second;
-  uint8_t function = frame[4];
   uint8_t payload_len = frame[3];
   uint8_t data_len = payload_len - 5;
   const uint8_t *data = frame.data() + 5;
