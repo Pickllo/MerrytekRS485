@@ -1,5 +1,6 @@
 #include "merrytek_radar.h"
 #include "esphome/core/log.h"
+#include "esphome/core/hal.h"
 #include <numeric>
 #include <map>
 #include <algorithm>
@@ -36,6 +37,8 @@ static const uint8_t FUNC_NEAR_ZONE_SHIELDING = 0x33;
 
 static const uint8_t FRAME_HEADER = 0x51;
 
+static const uint32_t RESPONSE_TIMEOUT_MS = 250;
+
 void MerrytekRadar::register_device(const std::string &name, uint16_t address, const std::string &model) {
   ESP_LOGD(TAG, "Registering device: %s (Address: 0x%04X, Model: %s)", name.c_str(), address, model.c_str());
   RadarDevice new_device;
@@ -68,6 +71,11 @@ void MerrytekRadar::update() {
 }
 
 void MerrytekRadar::loop() {
+  if (this->state_ == State::WAITING_FOR_RESPONSE && millis() - this->last_command_time_ > RESPONSE_TIMEOUT_MS) {
+    ESP_LOGW(TAG, "Timeout: No response from device 0x%04X.", this->waiting_for_address_);
+    this->state_ = State::IDLE;
+  }
+
   while (this->available()) {
     uint8_t byte;
     this->read_byte(&byte);
@@ -106,6 +114,13 @@ void MerrytekRadar::loop() {
 
 void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   uint16_t frame_id = (frame[1] << 8) | frame[2];
+  if (this->state_ == State::WAITING_FOR_RESPONSE) {
+    if (frame_id != this->waiting_for_address_) {
+      ESP_LOGD(TAG, "Ignoring frame from 0x%04X while waiting for 0x%04X", frame_id, this->waiting_for_address_);
+      return;
+    }
+    this->state_ = State::IDLE;
+  }
   auto it = this->devices_.find(frame_id);
   if (it == this->devices_.end()) {
     ESP_LOGV(TAG, "Ignoring frame from unconfigured address 0x%04X", frame_id);
@@ -120,40 +135,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   ESP_LOGD(TAG, "Received frame for device '%s' (Address: 0x%04X, Function: 0x%02X)",
            device.name.c_str(), device.address, function);
   
-  if (function == FUNC_DETECTION_AREA) {
-    auto it_sel = device.selects_.find(function);
-    if (it_sel != device.selects_.end() && data_len >= 1) {
-      auto *merrytek_sel = static_cast<MerrytekSelect *>(it_sel->second);
-      uint8_t received_value = data[0];
-
-      // MODIFICATION: Removed 'MerrytekSelect::' prefix to correctly reference the namespaced enum
-      if (merrytek_sel->get_behavior() == SEND_PERCENTAGE_VALUE) {
-        bool found = false;
-        for (size_t i = 0; i < merrytek_sel->size(); i++) {
-            optional<std::string> option_str_opt = merrytek_sel->at(i);
-            if (option_str_opt.has_value()) {
-                std::string option_str = option_str_opt.value();
-                char* end;
-                long option_val = strtol(option_str.c_str(), &end, 10);
-                if (end != option_str.c_str() && option_val == received_value) {
-                    merrytek_sel->publish_state(option_str);
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (!found) {
-            ESP_LOGW(TAG, "Received value %d for '%s', but could not find a matching percentage option.",
-                      received_value, merrytek_sel->get_name().c_str());
-        }
-      } else {
-        if (received_value < merrytek_sel->size()) {
-          merrytek_sel->publish_state(merrytek_sel->at(received_value).value());
-        }
-      }
-    }
-    return;
-  }
   if (device.model == "msa236d") {
     switch (function) {
       case FUNC_WORK_STATE:
@@ -187,6 +168,32 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
           uint32_t value = 0;
           for (int i = 0; i < data_len; ++i) { value = (value << 8) | data[i]; }
           it_num->second->publish_state(value);
+        }
+        break;
+      }
+            case FUNC_DETECTION_AREA: {
+        auto it_sel = device.selects_.find(function);
+        if (it_sel != device.selects_.end() && data_len >= 1) {
+          auto *merrytek_sel = static_cast<MerrytekSelect *>(it_sel->second);
+          uint8_t received_value = data[0];
+          bool found = false;
+          for (size_t i = 0; i < merrytek_sel->size(); i++) {
+            optional<std::string> option_str_opt = merrytek_sel->at(i);
+            if (option_str_opt.has_value()) {
+              std::string option_str = option_str_opt.value();
+              char* end;
+              long option_val = strtol(option_str.c_str(), &end, 10);
+              if (end != option_str.c_str() && option_val == received_value) {
+                merrytek_sel->publish_state(option_str);
+                found = true;
+                break;
+              }
+            }
+          }
+          if (!found) {
+            ESP_LOGW(TAG, "Received value %d for '%s', but could not find a matching percentage option.",
+                     received_value, merrytek_sel->get_name().c_str());
+          }
         }
         break;
       }
@@ -225,6 +232,17 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         }
         break;
       }
+      case FUNC_DETECTION_AREA: {
+        auto it_sel = device.selects_.find(function);
+        if (it_sel != device.selects_.end() && data_len >= 1) {
+          auto *merrytek_sel = static_cast<MerrytekSelect *>(it_sel->second);
+          uint8_t received_value = data[0];
+          if (received_value < merrytek_sel->size()) {
+            merrytek_sel->publish_state(merrytek_sel->at(received_value).value());
+          }
+        }
+        break;
+      }
       case FUNC_LED_INDICATOR:
       case FUNC_REPORT_QUERY_MODE:
       case FUNC_PRESENCE_DETECTION_ENABLE: {
@@ -249,6 +267,14 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
 }
 
 void MerrytekRadar::send_command_to_device(uint16_t address, uint8_t function_code, const std::vector<uint8_t> &data) {
+  if (this->state_ != State::IDLE) {
+    ESP_LOGW(TAG, "Bus is busy, command to 0x%04X for function 0x%02X was dropped.", address, function_code);
+    return;
+  }
+  this->state_ = State::WAITING_FOR_RESPONSE;
+  this->waiting_for_address_ = address;
+  this->last_command_time_ = millis();
+
   uint8_t payload_len = 5 + data.size();
   std::vector<uint8_t> frame;
   frame.reserve(payload_len + 1);
@@ -379,3 +405,4 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
