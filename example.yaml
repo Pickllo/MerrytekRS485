@@ -1,78 +1,124 @@
-# 1. Define the UART bus for RS485 communication
 uart:
-  - id: uart_bus
-    tx_pin: GPIO17
-    rx_pin: GPIO16
+  - id: uart_485
+    tx_pin: 18 # Change to your TX pin
+    rx_pin: 8  # Change to your RX pin
     baud_rate: 9600
-    tx_enable_pin: GPIO4 # Pin to control DE/RE on the MAX485 adapter
 
-# 2. Configure the Merrytek Radar component hub
 external_components:
   - source:
       type: git
-      url: [https://github.com/Pickllo/MerrytekRS485](https://github.com/Pickllo/MerrytekRS485)
-      ref: main 
+      url: https://github.com/Pickllo/MerrytekRS485
+      ref: main
     components: [ merrytek_radar ]
 
 merrytek_radar:
-  - uart_id: uart_bus
-    update_interval: 10s 
-    device_id: 0x0000 
-    id: my_radar
-
-# 3. Define all the entities for your sensor
+  uart_id: uart_485
+  id: merrytek_bus_manager 
+  devices:
+    - name: "Motion"
+      address: 0xFFFF
+      model: "msa236d"      
+    - name: "Presence"
+      address: 0x0000
+      model: "msa237d"
 binary_sensor:
   - platform: merrytek_radar
-    merrytek_radar_id: my_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion"
+    address: 0xFFFF
     type: presence
-    name: "Radar Presence"
+    device_class: motion
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence"
+    address: 0x0000
+    type: presence
+    device_class: occupancy
 
-sensor:
+text_sensor:
   - platform: merrytek_radar
-    merrytek_radar_id: my_radar
-    type: light_level
-    name: "Radar Light Level"
-    
-switch:
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion Firmware Version"
+    address: 0xFFFF
+    type: firmware_version
   - platform: merrytek_radar
-    merrytek_radar_id: my_radar
-    type: led_indicator
-    name: "Radar LED Indicator"
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence Firmware Version"
+    address: 0x0000
+    type: firmware_version
   - platform: merrytek_radar
-    merrytek_radar_id: my_radar
-    type: presence_detection_enable
-    name: "Radar Presence Detection"
-    
-number:
-  - platform: merrytek_radar
-    merrytek_radar_id: my_radar
-    type: hold_time
-    name: "Radar Hold Time"
-    unit_of_measurement: "s"
-    min_value: 3
-    max_value: 7200
-    step: 1
-  - platform: merrytek_radar
-    merrytek_radar_id: my_radar
-    type: daylight_threshold
-    name: "Radar Daylight Threshold"
-    unit_of_measurement: "lx"
-    min_value: 5
-    max_value: 2000
-    step: 5
-
-select:
-  - platform: merrytek_radar
-    merrytek_radar_id: my_radar
-    type: sensitivity
-    name: "Radar Sensitivity"
-  - platform: merrytek_radar
-    merrytek_radar_id: my_radar
-    type: near_zone_shielding
-    name: "Radar Near-Zone Shielding"
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence Learning Status"
+    address: 0x0000
+    type: learning_status
+    icon: mdi:brain
 
 button:
   - platform: merrytek_radar
-    merrytek_radar_id: my_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion Factory Reset"
+    address: 0xFFFF
     type: factory_reset
-    name: "Radar Factory Reset"
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion Firmware Query"
+    address: 0xFFFF
+    type: query_firmware_version
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence Factory Reset"
+    address: 0x0000
+    type: factory_reset
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence Firmware Query"
+    address: 0x0000
+    type: query_firmware_version
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence Self Learn"
+    address: 0x0000
+    type: environmental_self_learning
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence Ignore Distractions"
+    address: 0x0000
+    type: ignore_distractions
+
+select:
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion Detection Area"
+    address: 0xFFFF
+    type: motion_detection_area
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence Detection Area"
+    address: 0x0000
+    type: presence_detection_area
+
+number:
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion Hold Time"
+    address: 0xFFFF
+    type: hold_time
+    unit_of_measurement: "s"
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence Hold Time"
+    address: 0x0000
+    type: hold_time
+    unit_of_measurement: "s"
+
+switch:
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Motion LED Indicator"
+    address: 0xFFFF
+    type: led_indicator
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence LED Indicator"
+    address: 0x0000
+    type: led_indicator

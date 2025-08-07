@@ -3,45 +3,44 @@ import esphome.config_validation as cv
 from esphome.components import sensor
 from esphome.const import (
     CONF_ID,
-    CONF_FIRMWARE_VERSION,
-    ICON_CHIP,
+    CONF_TYPE,
+    CONF_ADDRESS,
+    DEVICE_CLASS_ILLUMINANCE,
     STATE_CLASS_MEASUREMENT,
     UNIT_LUX,
+    ICON_LIGHTBULB,
 )
-from . import MerrytekRadar
 
-# Define our custom sensor types as strings
-CONF_LIGHT_LEVEL = "light_level"
-CONF_DIFFERENCE_VALUE = "difference_value"
+from . import merrytek_radar_ns, MerrytekRadar
 
-# Map the custom types to their function codes
-SENSORS = {
-    CONF_LIGHT_LEVEL: 0x09,
-    CONF_DIFFERENCE_VALUE: 0x0A,
-    CONF_FIRMWARE_VERSION: 0x17,
+MerrytekSensor = merrytek_radar_ns.class_("MerrytekSensor", sensor.Sensor, cg.Component)
+
+TYPES = ["light_level"]
+
+FUNCTION_CODES = {
+    "light_level": 0x09,
 }
 
-# Define the configuration schema for sensors
-CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.extend({
-    cv.GenerateID(CONF_ID): cv.declare_id(sensor.Sensor),
+CONFIG_SCHEMA = sensor.sensor_schema(
+    unit_of_measurement=UNIT_LUX,
+    device_class=DEVICE_CLASS_ILLUMINANCE,
+    state_class=STATE_CLASS_MEASUREMENT,
+    icon=ICON_LIGHTBULB,
+).extend({
+    cv.GenerateID(): cv.declare_id(MerrytekSensor),
     cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
-    cv.Required("type"): cv.one_of(*SENSORS, lower=True),
-}).extend(cv.COMPONENT_SCHEMA)
+    cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
+    cv.Required(CONF_TYPE): cv.one_of(*TYPES, lower=True),
+})
 
-# Generate C++ code
 async def to_code(config):
-    hub = await cg.get_variable(config["merrytek_radar_id"])
+    parent = await cg.get_variable(config["merrytek_radar_id"])
     var = cg.new_Pvariable(config[CONF_ID])
     await sensor.register_sensor(var, config)
+    cg.add(var.set_parent(parent))
+    cg.add(var.set_address(config[CONF_ADDRESS]))
+    function_code = FUNCTION_CODES[config[CONF_TYPE]]
+    cg.add(var.set_function_code(function_code))
+    cg.add(parent.register_configurable_sensor(config[CONF_ADDRESS], function_code, var))
 
-    sensor_type = config["type"]
-    if sensor_type == CONF_LIGHT_LEVEL:
-        cg.add(hub.set_light_sensor(var))
-        cg.add(var.set_unit_of_measurement(UNIT_LUX))
-        cg.add(var.set_state_class(STATE_CLASS_MEASUREMENT))
-    elif sensor_type == CONF_DIFFERENCE_VALUE:
-        cg.add(hub.set_difference_value_sensor(var))
-        cg.add(var.set_unit_of_measurement(UNIT_LUX))
-    elif sensor_type == CONF_FIRMWARE_VERSION:
-        cg.add(hub.set_firmware_version_sensor(var))
-        cg.add(var.set_icon(ICON_CHIP))
+
