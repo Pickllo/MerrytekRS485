@@ -49,7 +49,7 @@ external_components:
 
 Configuration is split into two parts: the main hub component that manages the bus, and the individual entity configurations.
 
-** 1. Hub Configuration **
+**1. Hub Configuration**
 
 First, define the UART bus and the merrytek_radar component. This component acts as a hub for all your devices.
 Define the UART bus for RS485 communication
@@ -77,7 +77,7 @@ List all devices on the bus
       address: 0xFFFF
       model: "msa236d"
 ```
-** 2. Entity Configuration **
+**2. Entity Configuration**
 
 You can then add entities for each device. All entities require a merrytek_radar_id (pointing to the hub) and the device address.
 
@@ -172,6 +172,7 @@ number:
     step: 1
     unit_of_measurement: "s"
 ```
+
 
 
 
