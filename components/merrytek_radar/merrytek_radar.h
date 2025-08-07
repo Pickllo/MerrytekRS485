@@ -53,7 +53,13 @@ class MerrytekRadar : public PollingComponent, public uart::UARTDevice {
  protected:
   void handle_frame(const std::vector<uint8_t> &frame);
   uint8_t calculate_crc(const uint8_t *data, uint8_t len);
-
+  enum State {
+    IDLE,                 
+    WAITING_FOR_RESPONSE  
+  };
+  State state_{IDLE}; 
+  uint16_t waiting_for_address_{0}; 
+  uint32_t last_command_time_{0};  
   std::map<uint16_t, RadarDevice> devices_;
   std::vector<uint8_t> rx_buffer_;
 };
@@ -129,7 +135,3 @@ class MerrytekButton : public button::Button, public Component {
 };
 } // namespace merrytek_radar
 } // namespace esphome
-
-
-
-
