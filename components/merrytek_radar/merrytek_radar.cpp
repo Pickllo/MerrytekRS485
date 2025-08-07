@@ -114,10 +114,15 @@ void MerrytekRadar::loop() {
 
 void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
   uint16_t frame_id = (frame[1] << 8) | frame[2];
+  uint8_t function = frame[4];
   if (this->state_ == State::WAITING_FOR_RESPONSE) {
     if (frame_id != this->waiting_for_address_) {
       ESP_LOGD(TAG, "Ignoring frame from 0x%04X while waiting for 0x%04X", frame_id, this->waiting_for_address_);
       return;
+    }
+        if (function == this->last_sent_function_code_ ||
+        (this->last_sent_function_code_ == FUNC_READ_ALL && function == FUNC_FIRMWARE_VERSION)) {
+      this->state_ = State::IDLE; 
     }
   }
   auto it = this->devices_.find(frame_id);
@@ -152,14 +157,6 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         }
         break;
       }
-      case FUNC_FIRMWARE_VERSION: {
-        auto it_txt_sens = device.text_sensors_.find(function);
-        if (it_txt_sens != device.text_sensors_.end() && data_len >= 1) {
-          std::string version_string(reinterpret_cast<const char*>(data), data_len);
-          it_txt_sens->second->publish_state(version_string);
-        }
-        break;
-      }
       case FUNC_HOLD_TIME: {
         auto it_num = device.numbers_.find(function);
         if (it_num != device.numbers_.end() && data_len >= 1) {
@@ -169,7 +166,7 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
         }
         break;
       }
-            case FUNC_DETECTION_AREA: {
+      case FUNC_DETECTION_AREA: {
         auto it_sel = device.selects_.find(function);
         if (it_sel != device.selects_.end() && data_len >= 1) {
           auto *merrytek_sel = static_cast<MerrytekSelect *>(it_sel->second);
@@ -192,6 +189,17 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
             ESP_LOGW(TAG, "Received value %d for '%s', but could not find a matching percentage option.",
                      received_value, merrytek_sel->get_name().c_str());
           }
+        }
+        break;
+      }
+      case FUNC_FIRMWARE_VERSION: {
+        auto it_txt_sens = device.text_sensors_.find(function);
+        if (it_txt_sens != device.text_sensors_.end() && data_len >= 2) {
+          uint8_t major = data[0];
+          uint8_t minor = data[1];
+          char version_buf[16];
+          snprintf(version_buf, sizeof(version_buf), "%d.%d", major, minor);
+          it_txt_sens->second->publish_state(version_buf);
         }
         break;
       }
@@ -224,9 +232,12 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
       }
       case FUNC_FIRMWARE_VERSION: {
         auto it_txt_sens = device.text_sensors_.find(function);
-        if (it_txt_sens != device.text_sensors_.end() && data_len >= 1) {
-          std::string version_string(reinterpret_cast<const char*>(data), data_len);
-          it_txt_sens->second->publish_state(version_string);
+        if (it_txt_sens != device.text_sensors_.end() && data_len >= 2) {
+          uint8_t major = data[0];
+          uint8_t minor = data[1];
+          char version_buf[16];
+          snprintf(version_buf, sizeof(version_buf), "%d.%d", major, minor);
+          it_txt_sens->second->publish_state(version_buf);
         }
         break;
       }
@@ -295,6 +306,7 @@ void MerrytekRadar::send_command_to_device(uint16_t address, uint8_t function_co
   this->state_ = State::WAITING_FOR_RESPONSE;
   this->waiting_for_address_ = address;
   this->last_command_time_ = millis();
+  this->last_sent_function_code_ = function_code;
 
   uint8_t payload_len = 5 + data.size();
   std::vector<uint8_t> frame;
@@ -433,6 +445,3 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
-
-
-
