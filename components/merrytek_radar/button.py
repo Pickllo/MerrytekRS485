@@ -17,7 +17,7 @@ BUTTONS = {
     CONF_FACTORY_RESET: (0x30, [0x01]),
     CONF_ENVIRONMENTAL_SELF_LEARNING: (0x29, [0x01]),
     CONF_IGNORE_DISTRACTIONS: (0x29, [0x05]),
-    CONF_QUERY_FIRMWARE_VERSION: (0x17, []),
+    CONF_QUERY_FIRMWARE_VERSION: (0x00, [0x17]),
     CONF_ID_EDIT_ENABLE: (0x21, [0x01]),
     CONF_FLIP_STATUS: (0x23, [0x01]),
 }
@@ -37,6 +37,7 @@ async def to_code(config):
     function_code, data = BUTTONS[button_type]
     data_vector = cg.std_vector.template(cg.uint8)(data)
     cg.add(parent.register_configurable_button(config[CONF_ADDRESS], function_code, var, data_vector))
+
 
 
 
