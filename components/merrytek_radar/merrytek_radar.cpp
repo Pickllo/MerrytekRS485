@@ -119,11 +119,9 @@ void MerrytekRadar::handle_frame(const std::vector<uint8_t> &frame) {
       ESP_LOGD(TAG, "Ignoring frame from 0x%04X while waiting for 0x%04X", frame_id, this->waiting_for_address_);
       return;
     }
-    this->state_ = State::IDLE;
   }
   auto it = this->devices_.find(frame_id);
   if (it == this->devices_.end()) {
-    ESP_LOGV(TAG, "Ignoring frame from unconfigured address 0x%04X", frame_id);
     return;
   }
   RadarDevice &device = it->second;
@@ -405,4 +403,5 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
 
