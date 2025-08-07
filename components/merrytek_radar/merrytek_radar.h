@@ -24,6 +24,7 @@ struct RadarDevice {
   uint16_t address;
   std::string model;
   binary_sensor::BinarySensor *presence_sensor_{nullptr};
+  text_sensor::TextSensor *learning_status_text_sensor_{nullptr};
   std::map<uint8_t, sensor::Sensor *> sensors_;
   std::map<uint8_t, text_sensor::TextSensor *> text_sensors_; 
   std::map<uint8_t, number::Number *> numbers_;
@@ -43,6 +44,7 @@ class MerrytekRadar : public PollingComponent, public uart::UARTDevice {
   void register_presence_sensor(uint16_t address, binary_sensor::BinarySensor *sensor);
   void register_configurable_sensor(uint16_t address, uint8_t function_code, sensor::Sensor *sensor);
   void register_configurable_text_sensor(uint16_t address, uint8_t function_code, text_sensor::TextSensor *sensor);
+  void register_learning_status_text_sensor(uint16_t address, text_sensor::TextSensor *sensor);
   void register_configurable_number(uint16_t address, uint8_t function_code, number::Number *num);
   void register_configurable_switch(uint16_t address, uint8_t function_code, switch_::Switch *sw);
   void register_configurable_select(uint16_t address, uint8_t function_code, select::Select *sel, SelectBehavior behavior);
@@ -135,3 +137,4 @@ class MerrytekButton : public button::Button, public Component {
 };
 } // namespace merrytek_radar
 } // namespace esphome
+
