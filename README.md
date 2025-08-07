@@ -49,7 +49,7 @@ external_components:
 
 Configuration is split into two parts: the main hub component that manages the bus, and the individual entity configurations.
 
-1. Hub Configuration
+** 1. Hub Configuration **
 
 First, define the UART bus and the merrytek_radar component. This component acts as a hub for all your devices.
 Define the UART bus for RS485 communication
@@ -77,12 +77,12 @@ List all devices on the bus
       address: 0xFFFF
       model: "msa236d"
 ```
-2. Entity Configuration
+** 2. Entity Configuration **
 
 You can then add entities for each device. All entities require a merrytek_radar_id (pointing to the hub) and the device address.
 
 Binary Sensor
-type: presence - The main motion/occupancy sensor.
+* type: presence - The main motion/occupancy sensor.
 
 ```YAML
 binary_sensor:
@@ -96,8 +96,8 @@ binary_sensor:
 
 
 Text Sensor
-type: firmware_version - Displays the firmware version. Requires the query_firmware_version button to be pressed to update.
-type: learning_status - Shows the status of the self-learning feature. (For msa237d)
+* type: firmware_version - Displays the firmware version. Requires the query_firmware_version button to be pressed to update.
+* type: learning_status - Shows the status of the self-learning feature. (For msa237d)
 
 ```YAML
 text_sensor:
@@ -116,11 +116,11 @@ text_sensor:
 
 
 Button
-type: factory_reset - Resets the device to factory defaults.
-type: flip_status - Inverts the presence detection logic.
-type: query_firmware_version - Required to update the firmware_version text sensor.
-type: environmental_self_learning - Starts the 6-minute self-learning process. (For msa237d)
-type: ignore_distractions - Triggers the "Ignore distractions" function. (For msa237d)
+* type: factory_reset - Resets the device to factory defaults.
+* type: flip_status - Inverts the presence detection logic.
+* type: query_firmware_version - Required to update the firmware_version text sensor.
+* type: environmental_self_learning - Starts the 6-minute self-learning process. (For msa237d)
+* type: ignore_distractions - Triggers the "Ignore distractions" function. (For msa237d)
 
 ```YAML
 button:
@@ -133,10 +133,10 @@ button:
 
 
 Select
-type: sensitivity
-type: near_zone_shielding
-type: presence_detection_area - For sensors that use distance in meters (e.g., msa237d).
-type: motion_detection_area - For sensors that use percentage (e.g., msa236d).
+* type: sensitivity
+* type: near_zone_shielding
+* type: presence_detection_area - For sensors that use distance in meters (e.g., msa237d).
+* type: motion_detection_area - For sensors that use percentage (e.g., msa236d).
 
 ```YAML
 select:
@@ -147,9 +147,9 @@ select:
     type: presence_detection_area
 ```
 Switch
-type: led_indicator - Toggles the onboard LED.
-type: presence_detection_enable - Enables or disables the sensor.
-type: report_query_mode - Switches between active reporting and query-only mode.
+* type: led_indicator - Toggles the onboard LED.
+* type: presence_detection_enable - Enables or disables the sensor.
+* type: report_query_mode - Switches between active reporting and query-only mode.
 ```yaml
 select:
  - platform: merrytek_radar
@@ -159,7 +159,7 @@ select:
     type: led_indicator
 ```
 Number
-type: hold_time - Configures the hold time in seconds.
+* type: hold_time - Configures the hold time in seconds.
 ```yaml
 number:
   - platform: merrytek_radar
@@ -172,5 +172,6 @@ number:
     step: 1
     unit_of_measurement: "s"
 ```
+
 
 
