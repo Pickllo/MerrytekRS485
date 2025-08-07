@@ -33,8 +33,8 @@ You can install this component directly from GitHub using the `external_componen
 external_components:
   - source:
       type: git
-      url: [https://github.com/Pickllo/MerrytekRS485](https://github.com/Pickllo/MerrytekRS485)
-      ref: main # Or a specific tag/commit
+      url: [https://github.com/Pickllo/MerrytekRS485]
+      ref: main
     components: [ merrytek_radar ]
 
 
@@ -52,21 +52,23 @@ Configuration is split into two parts: the main hub component that manages the b
 1. Hub Configuration
 
 First, define the UART bus and the merrytek_radar component. This component acts as a hub for all your devices.
-
+Define the UART bus for RS485 communication
 YAML
 
-# Define the UART bus for RS485 communication
 uart:
   - id: uart_485
     tx_pin: 18
     rx_pin: 8
     baud_rate: 9600
 
-# Add the main component configuration
+Add the main component configuration
+YAML
 merrytek_radar:
   uart_id: uart_485
   id: merrytek_bus_manager
-  # List all devices on the bus
+  
+List all devices on the bus
+YAML
   devices:
     - name: "Presence"
       address: 0x0000
@@ -74,8 +76,6 @@ merrytek_radar:
     - name: "Motion"
       address: 0xFFFF
       model: "msa236d"
-
-
 
 2. Entity Configuration
 
@@ -86,7 +86,6 @@ Binary Sensor
 type: presence - The main motion/occupancy sensor.
 
 YAML
-
 
 binary_sensor:
   - platform: merrytek_radar
@@ -169,6 +168,7 @@ type: report_query_mode - Switches between active reporting and query-only mode.
 Number
 
 type: hold_time - Configures the hold time in seconds.
+
 
 
 
