@@ -15,6 +15,7 @@ MerrytekSelect = merrytek_radar_ns.class_("MerrytekSelect", cg.Component)
 MerrytekButton = merrytek_radar_ns.class_("MerrytekButton", cg.Component)
 MerrytekSensor = merrytek_radar_ns.class_("MerrytekSensor", cg.Component)
 MerrytekTextSensor = merrytek_radar_ns.class_("MerrytekTextSensor", cg.Component)
+SelectBehavior = merrytek_radar_ns.enum("SelectBehavior")
 
 MODELS = ["msa237d", "msa236d"]
 
