@@ -2,7 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import button
 from esphome.const import (CONF_ID, CONF_TYPE,CONF_ADDRESS,)
-from . import merrytek_radar_ns, MerrytekRadar, MerrytekButton
+from . import merrytek_radar_ns, MerrytekRadar
 
 # Define supported button entities and their function codes
 CONF_FACTORY_RESET = "factory_reset"
@@ -12,7 +12,7 @@ CONF_QUERY_FIRMWARE_VERSION = "query_firmware_version"
 CONF_ID_EDIT_ENABLE = "id_edit_enable"
 CONF_FLIP_STATUS = "flip_status"
 CONF_MERRYTEK_RADAR_ID = "merrytek_radar_id"
-
+MerrytekButton = merrytek_radar_ns.class_("MerrytekButton", button.Button)
 BUTTONS = {
     CONF_FACTORY_RESET: (0x30, [0x01]),
     CONF_ENVIRONMENTAL_SELF_LEARNING: (0x29, [0x01]),
@@ -37,6 +37,7 @@ async def to_code(config):
     function_code, data = BUTTONS[button_type]
     data_vector = cg.std_vector.template(cg.uint8)(data)
     cg.add(parent.register_configurable_button(config[CONF_ADDRESS], function_code, var, data_vector))
+
 
 
 
