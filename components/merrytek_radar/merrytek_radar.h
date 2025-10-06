@@ -124,7 +124,7 @@ class MerrytekSelect : public select::Select, public Component {
   uint8_t function_code_;
   SelectBehavior behavior_{SEND_INDEX};
 };
-class MerrytekButton : public button::Button, public Component {
+class MerrytekButton : public button::Button {
  public:
   void press_action() override;
   void set_parent_and_address(MerrytekRadar *parent, uint16_t address) { this->parent_ = parent; this->address_ = address; }
@@ -138,5 +138,6 @@ class MerrytekButton : public button::Button, public Component {
 };
 } // namespace merrytek_radar
 } // namespace esphome
+
 
 
