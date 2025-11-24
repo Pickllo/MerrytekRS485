@@ -8,11 +8,9 @@ from esphome.const import (
     ICON_CHIP,
     CONF_ICON,
 )
+from . import merrytek_radar_ns, MerrytekRadar, MerrytekTextSensor
 
-from . import merrytek_radar_ns, MerrytekRadar
-
-MerrytekTextSensor = merrytek_radar_ns.class_("MerrytekTextSensor", text_sensor.TextSensor, cg.Component)
-
+CONF_MERRYTEK_RADAR_ID = "merrytek_radar_id"
 CONF_LEARNING_STATUS = "learning_status"
 
 TYPES = ["firmware_version", CONF_LEARNING_STATUS]
@@ -20,19 +18,22 @@ TYPES = ["firmware_version", CONF_LEARNING_STATUS]
 FUNCTION_CODES = {
     "firmware_version": 0x17,
 }
-
-CONFIG_SCHEMA = text_sensor.TEXT_SENSOR_SCHEMA.extend({
-    cv.GenerateID(): cv.declare_id(MerrytekTextSensor),
-    cv.Required("merrytek_radar_id"): cv.use_id(MerrytekRadar),
+CONFIG_SCHEMA = text_sensor.text_sensor_schema(
+    MerrytekTextSensor,
+    icon=ICON_CHIP
+).extend({
+    cv.GenerateID(CONF_MERRYTEK_RADAR_ID): cv.use_id(MerrytekRadar),
     cv.Required(CONF_ADDRESS): cv.hex_uint16_t,
     cv.Required(CONF_TYPE): cv.one_of(*TYPES, lower=True),
-    cv.Optional(CONF_ICON, default=ICON_CHIP): cv.icon,
 })
 
 async def to_code(config):
-    parent = await cg.get_variable(config["merrytek_radar_id"])
+    parent = await cg.get_variable(config[CONF_MERRYTEK_RADAR_ID])
     var = cg.new_Pvariable(config[CONF_ID])
+    
     await text_sensor.register_text_sensor(var, config)
+    await cg.register_component(var, config)
+
     cg.add(var.set_parent(parent))
     cg.add(var.set_address(config[CONF_ADDRESS]))
 

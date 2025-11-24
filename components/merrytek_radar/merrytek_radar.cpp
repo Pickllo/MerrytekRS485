@@ -35,7 +35,10 @@ static const uint8_t FUNC_SINGLE_PERSON_MODE = 0x31;
 static const uint8_t FUNC_LIGHT_SENSING_MODE = 0x32;
 static const uint8_t FUNC_NEAR_ZONE_SHIELDING = 0x33;
 
-static const uint8_t FRAME_HEADER = 0x51;
+static const uint8_t FRAME_HEADER_OLD = 0x51;
+static const uint8_t FRAME_HEADER_NEW = 0xA7;
+
+static const uint8_t FRAME_HEADER_TX = FRAME_HEADER_OLD;
 
 static const uint32_t RESPONSE_TIMEOUT_MS = 250;
 
@@ -83,7 +86,9 @@ void MerrytekRadar::loop() {
   }
 
   while (this->rx_buffer_.size() >= 4) {
-    if (this->rx_buffer_[0] != FRAME_HEADER) {
+    uint8_t start_byte = this->rx_buffer_[0];
+    bool is_valid_header = (start_byte == FRAME_HEADER_OLD || start_byte == FRAME_HEADER_NEW);
+    if (!is_valid_header) {
       this->rx_buffer_.erase(this->rx_buffer_.begin());
       continue;
     }
@@ -307,7 +312,7 @@ void MerrytekRadar::send_command_to_device(uint16_t address, uint8_t function_co
   std::vector<uint8_t> frame;
   frame.reserve(payload_len + 1);
 
-  frame.push_back(FRAME_HEADER);
+  frame.push_back(FRAME_HEADER_TX);
   frame.push_back((address >> 8) & 0xFF);
   frame.push_back(address & 0xFF);
   frame.push_back(payload_len);
@@ -440,3 +445,4 @@ void MerrytekButton::press_action() {
 
 }  // namespace merrytek_radar
 }  // namespace esphome
+
