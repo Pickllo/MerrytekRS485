@@ -1,0 +1,94 @@
+substitutions:
+  dev_name: "Presence 1"
+  dev_addr: "0x0001"
+  hub_id: merrytek_bus_manager
+
+switch:
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} LED Indicator"
+    address: ${dev_addr}
+    type: led_indicator
+    entity_category: "config"
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Detection"
+    address: ${dev_addr}
+    type: presence_detection_enable
+    entity_category: "config"
+    disabled_by_default: true
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Active Report Mode"
+    address: ${dev_addr}
+    type: report_query_mode
+    entity_category: "config"
+    disabled_by_default: true
+
+number:
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Timeout"
+    address: ${dev_addr}
+    type: hold_time
+    min_value: 3
+    max_value: 7200
+    step: 1
+    unit_of_measurement: "s"
+    entity_category: "config"
+
+text_sensor:
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Learning Status"
+    address: ${dev_addr}
+    type: learning_status
+    icon: mdi:brain
+    entity_category: "diagnostic"
+
+select:
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Sensitivity"
+    address: ${dev_addr}
+    type: sensitivity
+    entity_category: "config"
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Near-Zone Shielding"
+    address: ${dev_addr}
+    type: near_zone_shielding
+    entity_category: "config"
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Detection Area"
+    address: ${dev_addr}
+    type: presence_detection_area
+    entity_category: "config"
+
+button:
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Factory Reset"
+    address: ${dev_addr}
+    type: factory_reset
+    entity_category: "config"
+    disabled_by_default: true
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Status Flip"
+    address: ${dev_addr}
+    type: flip_status
+    entity_category: "config"
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Self Learn"
+    address: ${dev_addr}
+    type: environmental_self_learning
+    entity_category: "config"
+  - platform: merrytek_radar
+    merrytek_radar_id: ${hub_id}
+    name: "${dev_name} Ignore Distractions"
+    address: ${dev_addr}
+    type: ignore_distractions
+    entity_category: "config"
