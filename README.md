@@ -217,78 +217,55 @@ You must physically set the RS485 address on the sensor (via dip switches or a h
 
 Hardware:
 
-Merrytek Sensor
-
-12/24V DC Power Supply Unit (PSU)
-
-USB-to-RS485 Adapter (A/B)
+* Merrytek Sensor
+* 12/24V DC Power Supply Unit (PSU)
+* USB-to-RS485 Adapter (A/B)
 
 Software:
 
-RealTerm (or any other software that allows you to communicate with your serial port)
+* RealTerm (or any other software that allows you to communicate with your serial port)
 
 
 2. Hardware Setup
 
-Power: Connect the Sensor to the 12V PSU.
-
-Data: Connect the Sensor signal wires to the USB-to-RS485 adapter:
-
+* Power: Connect the Sensor to the 12V PSU.
+* Data: Connect the Sensor signal wires to the USB-to-RS485 adapter:
 Sensor A -> Adapter A+
-
 Sensor B -> Adapter B-
-
-PC: Plug the USB adapter into your computer and note the COM Port number in Device Manager.
+* PC: Plug the USB adapter into your computer and note the COM Port number in Device Manager.
 
 3. Software Configuration (RealTerm)
 
 Open RealTerm.
-
 Display Tab: Set to Hex (Space), Half Duplex, Data: 0xA5 0x5A.
-
-Port Tab: Configure as follows:
-
-
+Port Tab - Configure as follows:
 Baud : 9600
-
 Parity : None
-
 Data Bits : 8
-
 Stop Bits : 1
-
 Flow Control : None
-
-Port
-
-[Select your COM Port]
+Port : [Select your COM Port]
 
 Click Open to initialize.
 
 4. Execution Procedure
 
-Step 1: Verify Connection
+* Step 1: Verify Connection
 Send the following command to check the current address:
-
 Command: 0x51 0x00 0x00 0x06 0x00 0x18 0x6F
-
 Expected Result: Data starting with A7 (e.g., A7 00 00 07 18 00 00 C6).
 
 Step 2: Enter Setting Mode
 Press the button on the Merrytek device once.
-
 Indicator: The light should flash continuously.
 
 Step 3: Enable Write Permissions
 Send the command to unlock editing:
-
 Command: 0x51 0x00 0x00 0x06 0x21 0x01 0x79
 
 Step 4: Set New Address
 Send the write command. Replace [Address] and [Checksum] with your specific values.
-
 Command: 0x51 0x00 0x00 0x07 0x18 0x00 [Address] [Checksum]
-
 (Note: Address range is 00-63 (Hex). Refer to the calculated address list for the correct checksum).
 
 Step 5: Confirm Change
