@@ -250,7 +250,7 @@ Click Open to initialize.
 
 4. Execution Procedure
 
-* Step 1: Verify Connection
+Step 1: Verify Connection
 Send the following command to check the current address:
 Command: 0x51 0x00 0x00 0x06 0x00 0x18 0x6F
 Expected Result: Data starting with A7 (e.g., A7 00 00 07 18 00 00 C6).
@@ -270,3 +270,4 @@ Command: 0x51 0x00 0x00 0x07 0x18 0x00 [Address] [Checksum]
 
 Step 5: Confirm Change
 Repeat Step 1 to ensure the sensor returns the new address.
+
