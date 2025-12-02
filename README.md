@@ -81,8 +81,20 @@ merrytek_radar:
  **Quick Start (Recommended)**
 
 The easiest way to use this component is via Remote Packages. This automatically creates all switches, sensors, and sliders for your devices without you needing to write hundreds of lines of YAML.
+1. Manually define binary sensor (this is so that you can use it to trigger scripts)
+Binary Sensor
+* type: presence - The main motion/occupancy sensor.
+```YAML
+binary_sensor:
+  - platform: merrytek_radar
+    merrytek_radar_id: merrytek_bus_manager
+    name: "Presence"
+    address: 0x0000
+    type: presence
+    device_class: occupancy
+```
 
-Use the packages configuration to load the interface for each device.
+2. Use the packages configuration to load the interface for each device.
 ```yaml
 packages:
   merrytek_sensors:
@@ -107,20 +119,6 @@ packages:
 
 **Manual Configuration (Reference)**
 If you prefer to manually configure specific entities (or want to know all available types), here is the complete list of options.
-
-Binary Sensor
-* type: presence - The main motion/occupancy sensor.
-
-```YAML
-binary_sensor:
-  - platform: merrytek_radar
-    merrytek_radar_id: merrytek_bus_manager
-    name: "Presence"
-    address: 0x0000
-    type: presence
-    device_class: occupancy
-```
-
 
 Text Sensor
 * type: firmware_version - Displays the firmware version. Requires the query_firmware_version button to be pressed to update.
@@ -270,4 +268,5 @@ Command: 0x51 0x00 0x00 0x07 0x18 0x00 [Address] [Checksum]
 
 Step 5: Confirm Change
 Repeat Step 1 to ensure the sensor returns the new address.
+
 
